@@ -1,3 +1,6 @@
 [submodule "externals/xlib"]
 	path = externals/xlib
 	url = https://github.com/hornet-gt/XLib
+[submodule "externals/googletest"]
+	path = externals/googletest
+	url = https://github.com/google/googletest

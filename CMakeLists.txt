@@ -33,6 +33,16 @@ file(GLOB_RECURSE SCU_SRCS  ${PROJECT_SOURCE_DIR}/externals/xlib/src/*.cu)
 
 cuda_add_library(hornet ${CPP_SRCS} ${CU_SRCS} ${SCPP_SRCS} ${SCU_SRCS})
 #-------------------------------------------------------------------------------
+if(PROJECT_NAME STREQUAL CMAKE_PROJECT_NAME)
+    set(PACKAGE_TESTS_OPTION TRUE)
+else()
+    set(PACKAGE_TESTS_OPTION FALSE)
+endif()
+option(PACKAGE_TESTS "Build the tests" PACKAGE_TESTS_OPTION)
+if(PACKAGE_TESTS)
+    enable_testing()
+    add_subdirectory(gtests)
+endif()
 
 cuda_add_executable(lb_test       test/BinarySearchTest.cu)
 cuda_add_executable(ptxtest       test/ptxtest.cu)
@@ -41,6 +51,8 @@ cuda_add_executable(hornet_insert_test   test/HornetInsertTest.cu)
 cuda_add_executable(hornet_delete_test   test/HornetDeleteTest.cu)
 cuda_add_executable(mem_benchmark test/MemBenchmark.cu)
 cuda_add_executable(weight_test   test/WeightTest.cu)
+cuda_add_executable(soa_test   test/SoATest.cu)
+#cuda_add_executable(bsearchlb   test/bsearchlb.cu)
 
 target_link_libraries(lb_test       hornet ${CUDA_LIBRARIES})
 target_link_libraries(ptxtest       hornet ${CUDA_LIBRARIES})
@@ -49,6 +61,8 @@ target_link_libraries(hornet_insert_test   hornet ${CUDA_LIBRARIES})
 target_link_libraries(hornet_delete_test   hornet ${CUDA_LIBRARIES})
 target_link_libraries(mem_benchmark hornet ${CUDA_LIBRARIES})
 target_link_libraries(weight_test   hornet ${CUDA_LIBRARIES})
+target_link_libraries(soa_test   hornet ${CUDA_LIBRARIES})
+#target_link_libraries(bsearchlb   hornet ${CUDA_LIBRARIES})
 
 #cuda_add_executable(data_layout test/DataLayout.cu)
 #cuda_add_executable(csr_test test/CsrTest.cu)
@@ -59,3 +73,5 @@ target_link_libraries(weight_test   hornet ${CUDA_LIBRARIES})
 #-------------------------------------------------------------------------------
 ##subscript_out_of_range
 #cmake -DCMAKE_BUILD_TYPE=Release -DCUDAHC=$clang39 ..
+
+#-------------------------------------------------------------------------------
