@@ -7,6 +7,7 @@
 #include <chrono>                       //std::chrono
 #include <random>                       //std::mt19937_64
 #include <cuda_profiler_api.h>
+#include <thrust/device_vector.h>
 
 using namespace hornets_nest;
 using namespace timer;
@@ -23,6 +24,8 @@ void exec(int argc, char* argv[]);
 int main(int argc, char* argv[]) {
     exec(argc, argv);
     cudaDeviceReset();
+    thrust::device_vector<int> b;
+    b.resize(10);
 }
 
 void exec(int argc, char* argv[]) {
