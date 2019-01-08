@@ -35,8 +35,8 @@
  */
 #pragma once
 
-#include "../Conf/MemoryManagerConf.hpp"
-#include "../Conf/HornetConf.hpp"
+#include "../Conf/MemoryManagerConf.cuh"
+#include "../Conf/HornetConf.cuh"
 #include <type_traits>
 
 namespace hornet {
@@ -57,6 +57,8 @@ class Vertex<
     template <typename, typename, typename, typename> friend class Edge;
     template <typename, typename, typename, typename> friend class HornetDevice;
 
+    public:
+
     using HornetDeviceT = HornetDevice<
         TypeList<VertexMetaTypes...>,
         TypeList<EdgeMetaTypes...>,
@@ -67,8 +69,15 @@ class Vertex<
         TypeList<EdgeMetaTypes...>,
         vid_t, degree_t>;
 
+    private:
+
     HornetDeviceT&  _hornet;
+
     vid_t           _id;
+
+    SoAPtr<degree_t, xlib::byte_t*, degree_t, degree_t, VertexMetaTypes...> _ptr;
+
+    SoARef<SoAPtr<degree_t, xlib::byte_t*, degree_t, degree_t, VertexMetaTypes...>> _data;
 
     HOST_DEVICE
     Vertex(HornetDeviceT& hornet, const vid_t id);
@@ -84,6 +93,9 @@ class Vertex<
 
     HOST_DEVICE
     degree_t limit(void) const;
+
+    HOST_DEVICE
+    void set_degree(degree_t new_degree) const;
 
     public:
     HOST_DEVICE

@@ -34,10 +34,12 @@
  * </blockquote>}
  */
 #pragma once
-#include "../Conf/Common.hpp"
+#include "../Conf/Common.cuh"
 #include "SoAPtr.cuh"
 #include <Device/Util/SafeCudaAPI.cuh>  //cuMalloc
 #include <Device/Util/SafeCudaAPISync.cuh>
+#include <thrust/device_vector.h>
+#include <thrust/gather.h>
 
 namespace hornet {
 
@@ -48,65 +50,82 @@ template<typename... Ts, DeviceType device_t>
 class SoAData<TypeList<Ts...>, device_t> {
     template<typename, DeviceType> friend class SoAData;
     int           _num_items;
+
+    int            _capacity;
+
     SoAPtr<Ts...> _soa;
 
     public:
-    SoAData(const int num_items) noexcept;
+    SoAData(const int num_items = 0) noexcept;
 
     ~SoAData(void) noexcept;
 
     SoAData& operator=(const SoAData&) = delete;
-    SoAData& operator=(SoAData&&) = delete;
 
-    template<DeviceType d_t>
-    SoAData(const SoAData<TypeList<Ts...>, d_t>& other) noexcept;
+    SoAData& operator=(SoAData&&);
+
+    //template<DeviceType d_t>
+    //SoAData(const SoAData<TypeList<Ts...>, d_t>& other) noexcept;
 
     template<DeviceType d_t>
     SoAData(SoAData<TypeList<Ts...>, d_t>&& other) noexcept;
 
     SoAPtr<Ts...>& get_soa_ptr(void) noexcept;
+
     const SoAPtr<Ts...>& get_soa_ptr(void) const noexcept;
 
     template<DeviceType d_t>
     void copy(const SoAData<TypeList<Ts...>, d_t>& other) noexcept;
 
     int get_num_items(void) noexcept;
+
+    void resize(const int resize_items) noexcept;
+
+    DeviceType get_device_type(void) noexcept;
 };
 
 template<typename... Ts, DeviceType device_t>
 class CSoAData<TypeList<Ts...>, device_t> {
     template<typename, DeviceType> friend class CSoAData;
     int            _num_items;
+
+    int             _capacity;
+
     CSoAPtr<Ts...> _soa;
 
     public:
-    CSoAData(const int num_items) noexcept;
+    CSoAData(const int num_items = 0) noexcept;
 
     ~CSoAData(void) noexcept;
 
-    CSoAData& operator=(const CSoAData&);
+    CSoAData& operator=(const CSoAData&) = delete;
 
     CSoAData& operator=(CSoAData&&);
 
-    CSoAData(const CSoAData<TypeList<Ts...>, device_t>& other) noexcept;
+    //CSoAData(const CSoAData<TypeList<Ts...>, device_t>& other) noexcept;
 
     CSoAData(CSoAData<TypeList<Ts...>, device_t>&& other) noexcept;
 
-    template<DeviceType d_t>
-    CSoAData(const CSoAData<TypeList<Ts...>, d_t>& other) noexcept;
+    //template<DeviceType d_t>
+    //CSoAData(const CSoAData<TypeList<Ts...>, d_t>& other) noexcept;
 
     template<DeviceType d_t>
     CSoAData(CSoAData<TypeList<Ts...>, d_t>&& other) noexcept;
 
     CSoAPtr<Ts...>& get_soa_ptr(void) noexcept;
+
     const CSoAPtr<Ts...>& get_soa_ptr(void) const noexcept;
 
-    void copy(const SoAPtr<TypeList<const Ts...>>& other, const DeviceType other_d_t, const int other_num_items) noexcept;
+    void copy(SoAPtr<Ts...> other, const DeviceType other_d_t, const int other_num_items) noexcept;
 
     template<DeviceType d_t>
-    void copy(const CSoAData<TypeList<const Ts...>, d_t>& other) noexcept;
+    void copy(CSoAData<TypeList<Ts...>, d_t>&& other) noexcept;
 
     int get_num_items(void) noexcept;
+
+    void resize(const int resize_items) noexcept;
+
+    DeviceType get_device_type(void) noexcept;
 };
 
 }

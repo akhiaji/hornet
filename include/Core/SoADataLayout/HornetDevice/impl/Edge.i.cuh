@@ -89,7 +89,6 @@ template <typename... VertexMetaTypes, typename... EdgeMetaTypes,
     typename vid_t, typename degree_t>
 template<unsigned N>
 HOST_DEVICE
-//typename xlib::SelectType<N, EdgeMetaTypes&...>::type//FIXME : Remove
 typename std::enable_if<
     (N < sizeof...(EdgeMetaTypes)),
     typename xlib::SelectType<N, EdgeMetaTypes&...>::type>::type

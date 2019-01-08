@@ -35,7 +35,7 @@
  */
 #pragma once
 
-#include "../Conf/HornetConf.hpp"
+#include "../Conf/HornetConf.cuh"
 #include <type_traits>
 
 namespace hornet {
@@ -52,6 +52,8 @@ class Edge<
 
     template <typename, typename, typename, typename> friend class Vertex;
 
+    public:
+
     using HornetDeviceT = HornetDevice<
         TypeList<VertexMetaTypes...>,
         TypeList<EdgeMetaTypes...>,
@@ -65,9 +67,11 @@ class Edge<
     using EdgeContainerT = CSoAPtr<
         vid_t, EdgeMetaTypes...>;
 
+    private:
+
     HornetDeviceT&      _hornet;
     vid_t               _src_id;
-    EdgeContainerT         _ptr;
+    EdgeContainerT         _ptr;//Needed for _ref
     SoARef<EdgeContainerT> _ref;
 
     HOST_DEVICE
@@ -98,12 +102,10 @@ class Edge<
 
     template<unsigned N>
     HOST_DEVICE
-    //typename xlib::SelectType<N + 1, EdgeMetaTypes&...>::type//FIXME : Remove
     typename std::enable_if<
         (N < sizeof...(EdgeMetaTypes)),
         typename xlib::SelectType<N, EdgeMetaTypes&...>::type>::type
     field(void) const;
-
 };
 
 }

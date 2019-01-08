@@ -86,6 +86,13 @@ capacity(void) noexcept {
 }
 
 template<typename... Ts, DeviceType device_t>
+size_t
+BLOCK_ARRAY::
+mem_size(void) noexcept {
+    return xlib::SizeSum<Ts...>::value * capacity();
+}
+
+template<typename... Ts, DeviceType device_t>
 bool
 BLOCK_ARRAY::
 full(void) noexcept {
@@ -149,7 +156,7 @@ insert(const degree_t requested_degree) noexcept {
     EdgeAccessData<degree_t> ea = {new_block_array.get_blockarray_ptr(), offset, new_block_array.capacity()};
 
     auto block_ptr = new_block_array.get_blockarray_ptr();
-    _ba_map[bin_index].insert(std::make_pair(block_ptr, (new_block_array)));
+    _ba_map[bin_index].insert(std::make_pair(block_ptr, std::move(new_block_array)));
     return ea;
 }
 

@@ -34,10 +34,11 @@
  * </blockquote>}
  */
 #pragma once
-#include "Conf/Common.hpp"
-#include "Conf/HornetConf.hpp"
+#include "Conf/Common.cuh"
+#include "Conf/HornetConf.cuh"
 #include "HornetDevice/HornetDevice.cuh"
-#include "Core/SoADataLayout/HornetInitialize/HornetInit.hpp"
+#include "Core/SoADataLayout/HornetInitialize/HornetInit.cuh"
+#include "BatchUpdate/BatchUpdate.cuh"
 
 namespace hornet {
 namespace gpu {
@@ -52,11 +53,19 @@ class Hornet<
     TypeList<VertexMetaTypes...>, TypeList<EdgeMetaTypes...>,
     vid_t, degree_t> {
 
+public:
+
+    using HornetDeviceT = hornet::HornetDevice<TypeList<VertexMetaTypes...>, TypeList<EdgeMetaTypes...>, vid_t, degree_t>;
     using EdgeAccessT = TypeList<degree_t, xlib::byte_t*, degree_t, degree_t>;
     using HInitT = hornet::HornetInit<
         TypeList<VertexMetaTypes...>,
         TypeList<EdgeMetaTypes...>,
         vid_t, degree_t>;
+    using VertexTypes = TypeList<degree_t, xlib::byte_t*, degree_t, degree_t, VertexMetaTypes...>;
+
+    using HostBlockArray = hornet::BlockArray<TypeList<vid_t, EdgeMetaTypes...>, DeviceType::HOST>;
+
+private:
 
     static int _instance_count;
 
@@ -64,25 +73,34 @@ class Hornet<
     degree_t _nE { 0 };
     int      _id { 0 };
 
-    SoAData<EdgeAccessT, DeviceType::DEVICE> _edge_access_data;
-    SoAData<TypeList<VertexMetaTypes...>, DeviceType::DEVICE> _vertex_meta_data;
+    SoAData<
+        TypeList<degree_t, xlib::byte_t*, degree_t, degree_t, VertexMetaTypes...>,
+        DeviceType::DEVICE> _vertex_data;
+
     BlockArrayManager<TypeList<vid_t, EdgeMetaTypes...>, DeviceType::DEVICE, degree_t> _ba_manager;
 
-    void initialize(HornetInit<
-        TypeList<VertexMetaTypes...>,
-        TypeList<EdgeMetaTypes...>,
-        vid_t, degree_t>& h_init) noexcept;
+    void initialize(HInitT& h_init) noexcept;
+
+    HornetDeviceT device(void);
+
+    void reallocate_vertices(BatchUpdate<TypeList<vid_t, vid_t, EdgeMetaTypes...>, degree_t>& batch, const bool is_insert);
+
+    void appendBatchEdges(BatchUpdate<TypeList<vid_t, vid_t, EdgeMetaTypes...>, degree_t>& batch);
 
 public:
 
-    Hornet(HornetInit<
-        TypeList<VertexMetaTypes...>,
-        TypeList<EdgeMetaTypes...>,
-        vid_t, degree_t>& h_init) noexcept;
+    Hornet(HInitT& h_init) noexcept;
 
+    void insert(BatchUpdate<TypeList<vid_t, vid_t, EdgeMetaTypes...>, degree_t>& batch, bool removeBatchDuplicates = false, bool removeGraphDuplicates = false);
 };
 
+#define HORNET Hornet<TypeList<VertexMetaTypes...>,\
+                      TypeList<EdgeMetaTypes...>,\
+                      vid_t,\
+                      degree_t>
+
 }
 }
 
-#include "Core/SoADataLayout/HornetInitialize/HornetInitialize.i.hpp"
+#include "Core/SoADataLayout/HornetInitialize/HornetInitialize.i.cuh"
+#include "Core/SoADataLayout/HornetOperations/HornetInsert.i.cuh"

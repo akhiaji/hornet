@@ -223,6 +223,14 @@ operator[](const int& index)  noexcept {
     return SoARef<SoAPtr<T, Ts...>>(*this, index);
 }
 
+template<typename T, typename... Ts>
+HOST_DEVICE
+SoAPtr<Ts...>
+SoAPtr<T, Ts...>::
+get_tail(void) noexcept {
+    return _tail;
+}
+
 //==============================================================================
 //////////////////////
 // CSoAPtr<T, Ts..> //

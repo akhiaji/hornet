@@ -45,7 +45,7 @@ template <typename... VertexMetaTypes, typename... EdgeMetaTypes,
 HOST_DEVICE
 VERTEX::
 Vertex(HornetDeviceT& hornet, const vid_t id) :
-    _hornet(hornet), _id(id) {}
+    _hornet(hornet), _id(id), _ptr(_hornet.get_vertex_data()), _data(_ptr[_id]) {}
 
 template <typename... VertexMetaTypes, typename... EdgeMetaTypes,
     typename vid_t, typename degree_t>
@@ -62,7 +62,7 @@ HOST_DEVICE
 degree_t
 VERTEX::
 degree(void) const {
-    return _hornet.get_edge_ptr()[_id].template get<0>();
+    return _data.template get<0>();
 }
 
 template <typename... VertexMetaTypes, typename... EdgeMetaTypes,
@@ -71,7 +71,7 @@ HOST_DEVICE
 xlib::byte_t*
 VERTEX::
 edge_block_ptr(void) const {
-    return _hornet.get_edge_ptr()[_id].template get<1>();
+    return _data.template get<1>();
 }
 
 template <typename... VertexMetaTypes, typename... EdgeMetaTypes,
@@ -80,7 +80,7 @@ HOST_DEVICE
 degree_t
 VERTEX::
 vertex_offset(void) const {
-    return _hornet.get_edge_ptr()[_id].template get<2>();
+    return _data.template get<2>();
 }
 
 template <typename... VertexMetaTypes, typename... EdgeMetaTypes,
@@ -89,7 +89,7 @@ HOST_DEVICE
 degree_t
 VERTEX::
 edges_per_block(void) const {
-    return _hornet.get_edge_ptr()[_id].template get<3>();
+    return _data.template get<3>();
 }
 
 template <typename... VertexMetaTypes, typename... EdgeMetaTypes,
@@ -112,7 +112,7 @@ typename std::enable_if<
     typename xlib::SelectType<N, VertexMetaTypes&...>::type>::type
 VERTEX::
 field(void) const {
-    return _hornet.get_vertex_meta_ptr()[_id].template get<N>();
+    return _data.template get<N+4>();
 }
 
 template <typename... VertexMetaTypes, typename... EdgeMetaTypes,
@@ -121,11 +121,19 @@ HOST_DEVICE
 VERTEX::EdgeT
 VERTEX::
 edge(const degree_t index) const {
-    auto _edge_access_ref = _hornet.get_edge_ptr()[_id];
     return VERTEX::EdgeT(_hornet, _id, index,
-            _edge_access_ref.template get<1>(),
-            _edge_access_ref.template get<2>(),
-            _edge_access_ref.template get<3>());
+            edge_block_ptr(),
+            vertex_offset(),
+            edges_per_block());
+}
+
+template <typename... VertexMetaTypes, typename... EdgeMetaTypes,
+    typename vid_t, typename degree_t>
+HOST_DEVICE
+void
+VERTEX::
+set_degree(degree_t new_degree) const {
+    _data.template get<0>() = new_degree;
 }
 
 #undef VERTEX

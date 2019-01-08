@@ -35,7 +35,7 @@
  */
 #pragma once
 
-#include "../Conf/HornetConf.hpp"
+#include "../Conf/HornetConf.cuh"
 #include "../SoA/SoAPtr.cuh"
 #include "../SoA/SoAData.cuh"//TODO : Remove
 #include "Vertex.cuh"
@@ -48,54 +48,42 @@ template <typename, typename,
          typename = VID_T, typename = DEGREE_T>
          class HornetDevice;
 
-template <typename... VertexMetaTypes, typename... EdgeMetaTypes,
-    typename vid_t, typename degree_t>
+template <typename... VertexMetaTypes, typename... EdgeMetaTypes, typename vid_t, typename degree_t>
 class HornetDevice<
-    TypeList<VertexMetaTypes...>, TypeList<EdgeMetaTypes...>,
-    vid_t, degree_t> {
+    TypeList<VertexMetaTypes...>, TypeList<EdgeMetaTypes...>, vid_t, degree_t> {
 
-    using VertexT = Vertex<TypeList<VertexMetaTypes...>, TypeList<EdgeMetaTypes...>, vid_t, degree_t>;
     template <typename, typename, typename, typename> friend class Vertex;
     template <typename, typename, typename, typename> friend class Edge;
 
     vid_t       _nV { 0 };
+
     degree_t    _nE { 0 };
 
-    SoAPtr<degree_t, xlib::byte_t*, degree_t, degree_t> _edge_access_data;
-    //_edge_access_data has the following fields
-    //degree
-    //edge_block_ptr
-    //vertex_offset
-    //edges_per_block
-
-    SoAPtr<VertexMetaTypes...> _vertex_meta_data;
-
-    HOST_DEVICE
-    SoAPtr<degree_t, xlib::byte_t*, degree_t, degree_t>&
-    get_edge_ptr(void) const noexcept;
-
-    HOST_DEVICE
-    typename std::enable_if<
-        (0 != sizeof...(VertexMetaTypes)),
-        SoAPtr<VertexMetaTypes...>&>::type
-    get_vertex_meta_ptr(void) const noexcept;
+    SoAPtr<degree_t, xlib::byte_t*, degree_t, degree_t, VertexMetaTypes...> _vertex_data;
 
     public:
+
+    using VertexT = Vertex<TypeList<VertexMetaTypes...>, TypeList<EdgeMetaTypes...>, vid_t, degree_t>;
+
+    HOST_DEVICE
+    SoAPtr<degree_t, xlib::byte_t*, degree_t, degree_t, VertexMetaTypes...>
+    get_vertex_data(void) noexcept;
+
     explicit HornetDevice(
         vid_t nV,
         degree_t nE,
-        SoAPtr<VertexMetaTypes...> vertex_meta_data,
-        SoAPtr<degree_t, xlib::byte_t*, degree_t, degree_t> edge_access_data) noexcept;
+        SoAPtr<degree_t, xlib::byte_t*, degree_t, degree_t, VertexMetaTypes...>& vertex_data) noexcept;
 
     HOST_DEVICE
-    vid_t nV(void) const noexcept;
+    vid_t nV(void) noexcept;
 
     HOST_DEVICE
-    degree_t nE(void) const noexcept;
+    degree_t nE(void) noexcept;
 
     HOST_DEVICE
-    VertexT vertex(const vid_t index) const noexcept;
+    VertexT vertex(const vid_t index) noexcept;
 };
+
 
 }
 

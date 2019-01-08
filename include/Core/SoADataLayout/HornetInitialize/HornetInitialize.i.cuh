@@ -38,41 +38,30 @@ namespace gpu {
 
 
 template<unsigned N, unsigned SIZE>
-struct AssignMetaData {
+struct AssignData {
     template <typename... EdgeMetaTypes, typename vid_t, typename degree_t>
     static void assign(
             CSoAPtr<vid_t, EdgeMetaTypes...> e_ptr, degree_t vertex_block_offset,
-            SoAPtr<EdgeMetaTypes const...> edge_meta, degree_t vertex_csr_offset,
-            const degree_t vertex_degree) {
-        if (edge_meta.template get<N>() != nullptr) {
+            SoAPtr<vid_t const, EdgeMetaTypes const...> edge_data,
+            degree_t vertex_csr_offset, const degree_t vertex_degree) {
+        if (edge_data.template get<N>() != nullptr) {
             for (degree_t i = 0; i < vertex_degree; ++i) {
-                e_ptr[vertex_block_offset + i].template get<N+1>() = edge_meta[vertex_csr_offset + i].template get<N>();
+                e_ptr[vertex_block_offset + i].template get<N>() =
+                    edge_data[vertex_csr_offset + i].template get<N>();
             }
         }
-        AssignMetaData<N+1, SIZE>::assign(e_ptr, vertex_block_offset, edge_meta, vertex_csr_offset, vertex_degree);
+        AssignData<N+1, SIZE>::assign(e_ptr, vertex_block_offset, edge_data, vertex_csr_offset, vertex_degree);
     }
 };
 
 template<unsigned N>
-struct AssignMetaData<N, N> {
+struct AssignData<N, N> {
     template <typename... EdgeMetaTypes, typename vid_t, typename degree_t>
     static void assign(
             CSoAPtr<vid_t, EdgeMetaTypes...> e_ptr, degree_t vertex_block_offset,
-            SoAPtr<EdgeMetaTypes const...> edge_meta, degree_t vertex_csr_offset,
-            const degree_t vertex_degree) {
-        if (edge_meta.template get<N>() != nullptr) {
-            for (degree_t i = 0; i < vertex_degree; ++i) {
-                e_ptr[vertex_block_offset + i].template get<N+1>() = edge_meta[vertex_csr_offset + i].template get<N>();
-            }
-        }
-    }
+            SoAPtr<vid_t const, EdgeMetaTypes const...> edge_data,
+            degree_t vertex_csr_offset, const degree_t vertex_degree) { }
 };
-
-
-#define HORNET Hornet<TypeList<VertexMetaTypes...>,\
-                      TypeList<EdgeMetaTypes...>,\
-                      vid_t,\
-                      degree_t>
 
 template <typename... VertexMetaTypes, typename... EdgeMetaTypes,
     typename vid_t, typename degree_t>
@@ -81,15 +70,11 @@ int HORNET::_instance_count = 0;
 template <typename... VertexMetaTypes, typename... EdgeMetaTypes,
     typename vid_t, typename degree_t>
 HORNET::
-Hornet(HornetInit<
-    TypeList<VertexMetaTypes...>,
-    TypeList<EdgeMetaTypes...>,
-    vid_t, degree_t>& h_init) noexcept :
+Hornet(HORNET::HInitT& h_init) noexcept :
     _nV(h_init.nV()),
     _nE(h_init.nE()),
     _id(_instance_count++),
-    _edge_access_data(h_init.nV()),
-    _vertex_meta_data(h_init.nV()) {
+    _vertex_data(h_init.nV()) {
     initialize(h_init);
 }
 
@@ -102,15 +87,12 @@ initialize(HornetInit<
     TypeList<EdgeMetaTypes...>,
     vid_t, degree_t>& h_init) noexcept {
 
-    SoAData<EdgeAccessT, DeviceType::HOST> e_access(_nV);
-    auto e_d = e_access.get_soa_ptr();
+    SoAData<VertexTypes, DeviceType::HOST> vertex_data(_nV);
+    auto e_d = vertex_data.get_soa_ptr();
 
-    std::unordered_map<
-        xlib::byte_t*,
-        BlockArray<TypeList<vid_t, EdgeMetaTypes...>, DeviceType::HOST>> h_blocks;
+    std::unordered_map<xlib::byte_t*, HostBlockArray> h_blocks;
 
     const auto * offsets = h_init.csr_offsets();
-    const auto * edges   = h_init.csr_edges();
     for (int i = 0; i < h_init.nV(); ++i) {
         auto degree = offsets[i + 1] - offsets[i];
         auto device_ad = _ba_manager.insert(degree);
@@ -126,27 +108,23 @@ initialize(HornetInit<
         if (search != h_blocks.end()) {
             e_ptr = CSoAPtr<vid_t, EdgeMetaTypes...>(search->second.get_blockarray_ptr(), device_ad.edges_per_block);
         } else {
-            BlockArray<TypeList<vid_t, EdgeMetaTypes...>, DeviceType::HOST> new_block_array(
+            HostBlockArray new_block_array(
                     xlib::ceil_log2(degree),
                     device_ad.edges_per_block);
             e_ptr = CSoAPtr<vid_t, EdgeMetaTypes...>(new_block_array.get_blockarray_ptr(), device_ad.edges_per_block);
             h_blocks.insert(std::make_pair(device_ad.edge_block_ptr, std::move(new_block_array)));
         }
-        for (degree_t j = 0; j < degree; ++j) {
-            e_ptr[device_ad.vertex_offset + j].template get<0>() = edges[offsets[i] + j];
-        }
-        AssignMetaData<0, sizeof...(EdgeMetaTypes) - 1>::assign(
+        AssignData<0, (1 + sizeof...(EdgeMetaTypes))>::assign(
                 e_ptr, device_ad.vertex_offset,
-                h_init.edge_meta_data_ptr(), offsets[i], degree);
+                h_init.edge_data_ptr(), offsets[i], degree);
     }
 
-    _edge_access_data.template copy(e_access);
+    _vertex_data.template copy(vertex_data);
     for(auto &b : h_blocks) {
-        DeviceCopy::copy(b.second.get_blockarray_ptr(),
-                DeviceType::HOST,
-                b.first,
-                DeviceType::DEVICE,
-                xlib::SizeSum<vid_t, EdgeMetaTypes...>::value * b.second.capacity());
+        DeviceCopy::copy(
+                b.second.get_blockarray_ptr(), DeviceType::HOST,
+                b.first, DeviceType::DEVICE,
+                b.second.mem_size());
     }
 
 }

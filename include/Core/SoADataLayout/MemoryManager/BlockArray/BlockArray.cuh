@@ -34,9 +34,10 @@
  * </blockquote>}
  */
 #pragma once
-#include "BitTree/BitTree.hpp"
+#include "BitTree/BitTree.cuh"
+#include "../../Conf/MemoryManagerConf.cuh" //EDGES_PER_BLOCKARRAY
 #include "../../SoA/SoAData.cuh"
-#include "../../Conf/HornetConf.hpp"
+#include "../../Conf/HornetConf.cuh"
 #include <array>
 #include <unordered_map>
 
@@ -69,6 +70,8 @@ class BlockArray<TypeList<Ts...>, device_t> {
     void remove(int offset) noexcept;
 
     int capacity(void) noexcept;
+
+    size_t mem_size(void) noexcept;
 
     bool full(void) noexcept;
 
@@ -117,4 +120,4 @@ class BlockArrayManager<TypeList<Ts...>, device_t, degree_t> {
 
 }
 
-#include "BlockArray.i.hpp"
+#include "BlockArray.i.cuh"

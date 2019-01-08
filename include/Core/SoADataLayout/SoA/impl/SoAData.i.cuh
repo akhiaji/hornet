@@ -42,25 +42,34 @@ namespace hornet {
 
 template<DeviceType device_t>
 xlib::byte_t* allocate(const int num_bytes) {
-    xlib::byte_t* ptr;
-    cuMalloc(ptr, num_bytes);
+    xlib::byte_t* ptr = nullptr;
+    if (num_bytes > 0) {
+        cuMalloc(ptr, num_bytes);
+    }
     return ptr;
 }
 
 template<DeviceType device_t>
 void deallocate(xlib::byte_t* ptr) {
-    cuFree(ptr);
+    if (ptr != nullptr) {
+        cuFree(ptr);
+    }
 }
 
 template<>
 xlib::byte_t* allocate<DeviceType::HOST>(const int num_bytes) {
-    xlib::byte_t* ptr = new xlib::byte_t[num_bytes];
+    xlib::byte_t* ptr = nullptr;
+    if (num_bytes > 0) {
+        ptr = new xlib::byte_t[num_bytes];
+    }
     return ptr;
 }
 
 template<>
 void deallocate<DeviceType::HOST>(xlib::byte_t* ptr) {
-    delete[] ptr;
+    if (ptr != nullptr) {
+        delete[] ptr;
+    }
 }
 
 //==============================================================================
@@ -249,6 +258,23 @@ struct RecursiveCopy {
                 num_items);
         RecursiveCopy<N + 1, SIZE>::copy(src, src_device_type, dst, dst_device_type, num_items);
     }
+
+    template<
+        template <typename...> typename SrcContnr,
+        template <typename...> typename DstContnr,
+        typename... Ts>
+    static void copy(
+            const SrcContnr<Ts const...>& src,
+            const DeviceType src_device_type,
+            DstContnr<Ts...>& dst,
+            const DeviceType dst_device_type,
+            const int num_items) {
+        DeviceCopy::copy(
+                src.template get<N>(), src_device_type,
+                dst.template get<N>(), dst_device_type,
+                num_items);
+        RecursiveCopy<N + 1, SIZE>::copy(src, src_device_type, dst, dst_device_type, num_items);
+    }
 };
 
 template<int N>
@@ -268,6 +294,53 @@ struct RecursiveCopy<N, N> {
                 dst.template get<N>(), dst_device_type,
                 num_items);
     }
+
+    template<
+        template <typename...> typename SrcContnr,
+        template <typename...> typename DstContnr,
+        typename... Ts>
+    static void copy(
+            const SrcContnr<Ts const...>& src,
+            DeviceType src_device_type,
+            DstContnr<Ts...>& dst,
+            DeviceType dst_device_type,
+            const int num_items) {
+        DeviceCopy::copy(
+                src.template get<N>(), src_device_type,
+                dst.template get<N>(), dst_device_type,
+                num_items);
+    }
+};
+
+//==============================================================================
+/////////////////////
+// RecursiveGather //
+/////////////////////
+
+template<unsigned N, unsigned SIZE>
+struct RecursiveGather {
+    template<typename degree_t, typename Ptr>
+    HOST_DEVICE
+    static void assign(Ptr src, Ptr dst,
+        const thrust::device_vector<degree_t>& map,
+        const degree_t nE) {
+        if (N >= SIZE) { return; }
+        thrust::gather(
+                thrust::device,
+                map.begin(), map.begin() + nE,
+                src.template get<N>(),
+                dst.template get<N>());
+        RecursiveGather<N+1, SIZE>::assign(src, dst, map, nE);
+    }
+};
+
+template<unsigned N>
+struct RecursiveGather<N, N> {
+    template<typename degree_t, typename Ptr>
+    HOST_DEVICE
+    static void assign(Ptr src, Ptr dst,
+        const thrust::device_vector<degree_t>& map,
+        const degree_t nE) { }
 };
 
 //==============================================================================
@@ -278,32 +351,35 @@ struct RecursiveCopy<N, N> {
 template<typename... Ts, DeviceType device_t>
 SoAData<TypeList<Ts...>, device_t>::
 SoAData(const int num_items) noexcept :
-_num_items(num_items) {
-    RecursiveAllocate<0, sizeof...(Ts) - 1, device_t>::allocate(_soa, num_items);
+_num_items(num_items), _capacity(num_items) {
+    if (num_items != 0) {
+        RecursiveAllocate<0, sizeof...(Ts) - 1, device_t>::allocate(_soa, _capacity);
+    }
 }
 
-template<typename... Ts, DeviceType device_t>
-template<DeviceType d_t>
-SoAData<TypeList<Ts...>, device_t>::
-SoAData(const SoAData<TypeList<Ts...>, d_t>& other) noexcept :
-_num_items(other._num_items) {
-    RecursiveAllocate<0, sizeof...(Ts) - 1, device_t>::allocate(_soa, _num_items);
-    RecursiveCopy<0, sizeof...(Ts) - 1>::copy(other._soa, d_t, _soa, device_t, _num_items);
-}
+//template<typename... Ts, DeviceType device_t>
+//template<DeviceType d_t>
+//SoAData<TypeList<Ts...>, device_t>::
+//SoAData(const SoAData<TypeList<Ts...>, d_t>& other) noexcept :
+//_num_items(other._num_items), _capacity(other._capacity) {
+//    RecursiveAllocate<0, sizeof...(Ts) - 1, device_t>::allocate(_soa, _capacity);
+//    RecursiveCopy<0, sizeof...(Ts) - 1>::copy(other._soa, d_t, _soa, device_t, _num_items);
+//}
 
 template<typename... Ts, DeviceType device_t>
 template<DeviceType d_t>
 SoAData<TypeList<Ts...>, device_t>::
 SoAData(SoAData<TypeList<Ts...>, d_t>&& other) noexcept :
-_num_items(other._num_items) {
+_num_items(other._num_items), _capacity(other._capacity) {
     if (d_t != device_t) {
         //If other's device type is different, do not alter its variables
-        RecursiveAllocate<0, sizeof...(Ts) - 1, device_t>::allocate(_soa, _num_items);
+        RecursiveAllocate<0, sizeof...(Ts) - 1, device_t>::allocate(_soa, _capacity);
         RecursiveCopy<0, sizeof...(Ts) - 1>::copy(other._soa, d_t, _soa, device_t, _num_items);
     } else {
         RecursiveMove<0, sizeof...(Ts) - 1, device_t>::move(other._soa, _soa);
         RecursiveSetNull<0, sizeof...(Ts) - 1>::set_null(other._soa);
         other._num_items = 0;
+        other._capacity = 0;
     }
 }
 
@@ -343,6 +419,28 @@ get_num_items(void) noexcept {
     return _num_items;
 }
 
+template<typename... Ts, DeviceType device_t>
+void
+SoAData<TypeList<Ts...>, device_t>::
+resize(const int resize_items) noexcept {
+    if (resize_items > _capacity) {
+        SoAPtr<Ts...> temp_soa;
+        RecursiveAllocate<0, sizeof...(Ts) - 1, device_t>::allocate(temp_soa, resize_items);
+        RecursiveCopy<0, sizeof...(Ts) - 1>::copy(_soa, device_t, temp_soa, device_t, _num_items);
+        RecursiveDeallocate<0, sizeof...(Ts) - 1, device_t>::deallocate(_soa);
+        _soa = temp_soa;
+        _capacity = resize_items;
+    }
+    _num_items = resize_items;
+}
+
+template<typename... Ts, DeviceType device_t>
+DeviceType
+SoAData<TypeList<Ts...>, device_t>::
+get_device_type(void) noexcept {
+    return device_t;
+}
+
 //==============================================================================
 //////////////
 // CSoAData //
@@ -351,44 +449,41 @@ get_num_items(void) noexcept {
 template<typename... Ts, DeviceType device_t>
 CSoAData<TypeList<Ts...>, device_t>::
 CSoAData(const int num_items) noexcept :
-_num_items(xlib::upper_approx<512>(num_items)),
-_soa(allocate<device_t>(xlib::SizeSum<Ts...>::value * _num_items), _num_items) {}
+_num_items(num_items), _capacity(xlib::upper_approx<512>(num_items)),
+_soa(allocate<device_t>(xlib::SizeSum<Ts...>::value * _capacity), _capacity) {}
 
-template<typename... Ts, DeviceType device_t>
-CSoAData<TypeList<Ts...>, device_t>::
-CSoAData(const CSoAData<TypeList<Ts...>, device_t>& other) noexcept :
-_num_items(other._num_items),
-_soa(allocate<device_t>(xlib::SizeSum<Ts...>::value * _num_items), _num_items) {
-    DeviceCopy::copy(
-            reinterpret_cast<xlib::byte_t const *>(
-                other._soa.template get<0>()), device_t,
-            reinterpret_cast<xlib::byte_t*>(
-                _soa.template get<0>()), device_t,
-            xlib::SizeSum<Ts...>::value * _num_items);
-}
+//template<typename... Ts, DeviceType device_t>
+//CSoAData<TypeList<Ts...>, device_t>::
+//CSoAData(const CSoAData<TypeList<Ts...>, device_t>& other) noexcept :
+//_num_items(other._num_items), _capacity(xlib::upper_approx<512>(_num_items)),
+//_soa(allocate<device_t>(xlib::SizeSum<Ts...>::value * _capacity), _capacity) {
+//    //FIXME templating?
+//    copy(other);
+//}
 
 template<typename... Ts, DeviceType device_t>
 CSoAData<TypeList<Ts...>, device_t>::
 CSoAData(CSoAData<TypeList<Ts...>, device_t>&& other) noexcept :
-_num_items(other._num_items),
+_num_items(other._num_items), _capacity(xlib::upper_approx<512>(_num_items)),
 _soa(nullptr, 0) {
     _soa = other._soa;
     other._soa = CSoAPtr<Ts...>(nullptr, 0);
     other._num_items = 0;
+    other._capacity = 0;
 }
 
-template<typename... Ts, DeviceType device_t>
-CSoAData<TypeList<Ts...>, device_t>&
-CSoAData<TypeList<Ts...>, device_t>::
-operator=(const CSoAData<TypeList<Ts...>, device_t>& other) {
-    deallocate<device_t>(reinterpret_cast<xlib::byte_t*>(_soa.template get<0>()));
-    DeviceCopy::copy(
-            reinterpret_cast<xlib::byte_t const *>(
-                other._soa.template get<0>()), device_t,
-            reinterpret_cast<xlib::byte_t*>(
-                _soa.template get<0>()), device_t,
-            xlib::SizeSum<Ts...>::value * _num_items);
-}
+//template<typename... Ts, DeviceType device_t>
+//CSoAData<TypeList<Ts...>, device_t>&
+//CSoAData<TypeList<Ts...>, device_t>::
+//operator=(const CSoAData<TypeList<Ts...>, device_t>& other) {
+//    deallocate<device_t>(reinterpret_cast<xlib::byte_t*>(_soa.template get<0>()));
+//    DeviceCopy::copy(
+//            reinterpret_cast<xlib::byte_t const *>(
+//                other._soa.template get<0>()), device_t,
+//            reinterpret_cast<xlib::byte_t*>(
+//                _soa.template get<0>()), device_t,
+//            xlib::SizeSum<Ts...>::value * _capacity);
+//}
 
 template<typename... Ts, DeviceType device_t>
 CSoAData<TypeList<Ts...>, device_t>&
@@ -398,44 +493,36 @@ operator=(CSoAData<TypeList<Ts...>, device_t>&& other) {
     _soa = other._soa;
     other._soa = CSoAPtr<Ts...>(nullptr, 0);
     other._num_items = 0;
+    other._capacity = 0;
 }
 
-template<typename... Ts, DeviceType device_t>
-template<DeviceType d_t>
-CSoAData<TypeList<Ts...>, device_t>::
-CSoAData(const CSoAData<TypeList<Ts...>, d_t>& other) noexcept :
-_num_items(other._num_items),
-_soa(allocate<device_t>(xlib::SizeSum<Ts...>::value * _num_items), _num_items) {
-    DeviceCopy::copy(
-            reinterpret_cast<xlib::byte_t const *>(
-                other._soa.template get<0>()), d_t,
-            reinterpret_cast<xlib::byte_t*>(
-                _soa.template get<0>()), device_t,
-            xlib::SizeSum<Ts...>::value * _num_items);
-}
+//template<typename... Ts, DeviceType device_t>
+//template<DeviceType d_t>
+//CSoAData<TypeList<Ts...>, device_t>::
+//CSoAData(const CSoAData<TypeList<Ts...>, d_t>& other) noexcept :
+//_num_items(other._num_items), _capacity(xlib::upper_approx<512>(_num_items)),
+//_soa(allocate<device_t>(xlib::SizeSum<Ts...>::value * _capacity), _capacity) {
+//    copy(other);
+//}
 
 template<typename... Ts, DeviceType device_t>
 template<DeviceType d_t>
 CSoAData<TypeList<Ts...>, device_t>::
 CSoAData(CSoAData<TypeList<Ts...>, d_t>&& other) noexcept :
-_num_items(other._num_items),
+_num_items(other._num_items), _capacity(other._capacity),
 _soa(nullptr, 0) {
     if (d_t != device_t) {
         //If other's device type is different, do not alter its variables
         _soa =
             CSoAPtr<Ts...>(
-                    allocate<device_t>(xlib::SizeSum<Ts...>::value * _num_items),
-                    _num_items);
-        DeviceCopy::copy(
-                reinterpret_cast<xlib::byte_t const *>(
-                    other._soa.template get<0>()), d_t,
-                reinterpret_cast<xlib::byte_t*>(
-                    _soa.template get<0>()), device_t,
-                xlib::SizeSum<Ts...>::value * _num_items);
+                    allocate<device_t>(xlib::SizeSum<Ts...>::value * _capacity),
+                    _capacity);
+        copy(other);
     } else {
         _soa = other._soa;
         other._soa = CSoAPtr<Ts...>(nullptr, 0);
         other._num_items = 0;
+        other._capacity = 0;
     }
 }
 
@@ -462,7 +549,7 @@ get_soa_ptr(void) const noexcept {
 template<typename... Ts, DeviceType device_t>
 void
 CSoAData<TypeList<Ts...>, device_t>::
-copy(const SoAPtr<TypeList<const Ts...>>& other, const DeviceType other_d_t, const int other_num_items) noexcept {
+copy(SoAPtr<Ts...> other, const DeviceType other_d_t, const int other_num_items) noexcept {
     int _item_count = std::min(other_num_items, _num_items);
     RecursiveCopy<0, sizeof...(Ts) - 1>::copy(other, other_d_t, _soa, device_t, _item_count);
 }
@@ -471,18 +558,21 @@ template<typename... Ts, DeviceType device_t>
 template<DeviceType d_t>
 void
 CSoAData<TypeList<Ts...>, device_t>::
-copy(const CSoAData<TypeList<const Ts...>, d_t>& other) noexcept {
-    if (other._num_items != _num_items) {
-        int _item_count = std::min(other._num_items, _num_items);
-        RecursiveCopy<0, sizeof...(Ts) - 1>::copy(
-                other.get_soa_ptr(), d_t, _soa, device_t, _item_count);
-    } else {
+copy(CSoAData<TypeList<Ts...>, d_t>&& other) noexcept {
+    //Copy the whole block as is
+    if ((other._capacity == _capacity) &&
+            (other._capacity == other._num_items) &&
+            (other._num_items == _num_items)) {
         DeviceCopy::copy(
                 reinterpret_cast<xlib::byte_t const *>(
                     other.get_soa_ptr().template get<0>()), d_t,
                 reinterpret_cast<xlib::byte_t*>(
                     _soa.template get<0>()), device_t,
-                xlib::SizeSum<Ts...>::value * _num_items);
+                xlib::SizeSum<Ts...>::value * other._capacity);
+    } else {
+        int _item_count = std::min(other._num_items, _num_items);
+        RecursiveCopy<0, sizeof...(Ts) - 1>::copy(
+                other.get_soa_ptr(), d_t, _soa, device_t, _item_count);
     }
 }
 
@@ -491,6 +581,30 @@ int
 CSoAData<TypeList<Ts...>, device_t>::
 get_num_items(void) noexcept {
     return _num_items;
+}
+
+template<typename... Ts, DeviceType device_t>
+void
+CSoAData<TypeList<Ts...>, device_t>::
+resize(const int resize_items) noexcept {
+    if (resize_items > _capacity) {
+        CSoAPtr<Ts...> temp_soa(
+                allocate<device_t>(xlib::SizeSum<Ts...>::value * resize_items),
+                resize_items);
+        RecursiveCopy<0, sizeof...(Ts) - 1>::copy(
+                _soa, device_t, temp_soa, device_t, _num_items);
+        deallocate<device_t>(reinterpret_cast<xlib::byte_t*>(_soa.template get<0>()));
+        _soa = temp_soa;
+        _capacity = resize_items;
+    }
+    _num_items = resize_items;
+}
+
+template<typename... Ts, DeviceType device_t>
+DeviceType
+CSoAData<TypeList<Ts...>, device_t>::
+get_device_type(void) noexcept {
+    return device_t;
 }
 
 //==============================================================================

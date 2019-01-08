@@ -39,9 +39,6 @@
 
 namespace hornet {
 
-template<typename... Ts>
-class SoAPtr;
-
 //==============================================================================
 ////////////
 // SoARef //
@@ -73,10 +70,10 @@ public:
     HOST_DEVICE
     SoARef(const SoARef<Contnr<Ts...>>& other) noexcept;
 
-private:
-
     HOST_DEVICE
     SoARef(Contnr<Ts...>& soa, const int& index) noexcept;
+
+private:
 
     Contnr<Ts...>&  _soa;
     const int     _index;
@@ -86,6 +83,9 @@ private:
 ////////////
 // SoAPtr //
 ////////////
+
+template<typename... Ts>
+class SoAPtr;
 
 template<typename T>
 class SoAPtr<T> {
@@ -154,6 +154,9 @@ public:
 
     HOST_DEVICE
     SoARef<SoAPtr<T, Ts...>> operator[](const int& index) noexcept;
+
+    HOST_DEVICE
+    SoAPtr<Ts...> get_tail(void) noexcept;
 
 private:
     T*             _ptr;

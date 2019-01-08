@@ -34,7 +34,7 @@
  * </blockquote>}
  */
 #pragma once
-#include "BlockArray/BlockArray.hpp"
+#include "BlockArray/BlockArray.cuh"
 
 namespace hornet {
 

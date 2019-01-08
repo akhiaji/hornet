@@ -46,16 +46,15 @@ HORNET_DEVICE::
 HornetDevice(
     vid_t nV,
     degree_t nE,
-    SoAPtr<VertexMetaTypes...> vertex_meta_data,
-    SoAPtr<degree_t, xlib::byte_t*, degree_t, degree_t> edge_access_data) noexcept :
-    _nV(nV), _nE(nE), _vertex_meta_data(vertex_meta_data), _edge_access_data(edge_access_data) {}
+    SoAPtr<degree_t, xlib::byte_t*, degree_t, degree_t, VertexMetaTypes...>& vertex_data) noexcept :
+    _nV(nV), _nE(nE), _vertex_data(vertex_data) {}
 
 template <typename... VertexMetaTypes, typename... EdgeMetaTypes,
     typename vid_t, typename degree_t>
 HOST_DEVICE
 vid_t
 HORNET_DEVICE::
-nV() const noexcept {
+nV() noexcept {
     return _nV;
 }
 
@@ -64,7 +63,7 @@ template <typename... VertexMetaTypes, typename... EdgeMetaTypes,
 HOST_DEVICE
 degree_t
 HORNET_DEVICE::
-nE() const noexcept {
+nE() noexcept {
     return _nE;
 }
 
@@ -73,28 +72,17 @@ template <typename... VertexMetaTypes, typename... EdgeMetaTypes,
 HOST_DEVICE
 HORNET_DEVICE::VertexT
 HORNET_DEVICE::
-vertex(const vid_t index) const noexcept {
+vertex(const vid_t index) noexcept {
     return VertexT(*this, index);
 }
 
 template <typename... VertexMetaTypes, typename... EdgeMetaTypes,
     typename vid_t, typename degree_t>
 HOST_DEVICE
-SoAPtr<degree_t, xlib::byte_t*, degree_t, degree_t>&
+SoAPtr<degree_t, xlib::byte_t*, degree_t, degree_t, VertexMetaTypes...>
 HORNET_DEVICE::
-get_edge_ptr(void) const noexcept {
-    return _edge_access_data;
-}
-
-template <typename... VertexMetaTypes, typename... EdgeMetaTypes,
-    typename vid_t, typename degree_t>
-HOST_DEVICE
-typename std::enable_if<
-    (0 != sizeof...(VertexMetaTypes)),
-    SoAPtr<VertexMetaTypes...>&>::type
-HORNET_DEVICE::
-get_vertex_meta_ptr(void) const noexcept {
-    return _vertex_meta_data;
+get_vertex_data(void) noexcept {
+    return _vertex_data;
 }
 
 #undef HORNETDEVICE

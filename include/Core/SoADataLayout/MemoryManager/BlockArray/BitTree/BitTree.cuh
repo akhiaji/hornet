@@ -40,7 +40,6 @@
 #pragma once
 
 #include "BasicTypes.hpp"                           //xlib::byte
-#include "Core/MemoryManager/MemoryManagerConf.hpp" //EDGES_PER_BLOCKARRAY
 #include <Host/Metaprogramming.hpp>                 //xlib::GeometricSerie
 #include <utility>                                  //std::pair
 
@@ -158,4 +157,4 @@ private:
 
 }
 
-#include "BitTree.i.hpp"
+#include "BitTree.i.cuh"

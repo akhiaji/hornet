@@ -2,7 +2,7 @@
  * @author Federico Busato                                                  <br>
  *         Univerity of Verona, Dept. of Computer Science                   <br>
  *         federico.busato@univr.it
- * @date September, 2017
+ * @date August, 2017
  * @version v2
  *
  * @copyright Copyright © 2017 Hornet. All rights reserved.
@@ -32,55 +32,67 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  * </blockquote>}
+ *
+ * @file
  */
 #pragma once
-#include "../Conf/HornetConf.hpp"
+#include "../Conf/HornetConf.cuh"
 
+/**
+ * @brief The namespace contanins all classes and methods related to the
+ *        Hornet data structure
+ */
 namespace hornet {
 
-//enum class BatchUpdateType { HOST, DEVICE };
-
-using BatchUpdateType = DeviceType;
-
-template <typename,
+template <typename, typename,
          typename = VID_T, typename = DEGREE_T>
-         class BatchUpdate;
+         class HornetInit;
 
-template <typename... EdgeMetaTypes,
+template <typename... VertexMetaTypes, typename... EdgeMetaTypes,
     typename vid_t, typename degree_t>
-class BatchUpdate<
-    TypeList<EdgeMetaTypes...>,
+class HornetInit<
+    TypeList<VertexMetaTypes...>, TypeList<EdgeMetaTypes...>,
     vid_t, degree_t> {
-    degree_t                       _nE        { 0 };
-    const vid_t *                  _src { nullptr };
-    //const vid_t *                  _dst { nullptr };
-    BatchUpdateType _batch_update_type  {BatchUpdateType::HOST};
 
-    SoAPtr<vid_t const, EdgeMetaTypes const...>  _edge_data;
+    vid_t                       _nV          { 0 };
+    degree_t                    _nE          { 0 };
+    //const degree_t *            _csr_offsets { nullptr };
+    //const vid_t *               _csr_edges   { nullptr };
+
+    SoAPtr<degree_t const, VertexMetaTypes const...> _vertex_data;
+    SoAPtr<vid_t const, EdgeMetaTypes const...>        _edge_data;
 
 public:
-    BatchUpdate(
-            const degree_t num_edges,
-            const vid_t* src,
-            const vid_t* dst,
-            BatchUpdateType update_type = BatchUpdateType::HOST) noexcept;
 
-    BatchUpdateType type() const noexcept;
+    HornetInit(
+            const vid_t num_vertices, const degree_t num_edges,
+            const degree_t* csr_offsets,
+            const vid_t*    csr_edges) noexcept;
 
     void insertEdgeData(EdgeMetaTypes const * const... edge_meta_data) noexcept;
 
     template <unsigned N>
     void insertEdgeData(typename xlib::SelectType<N, EdgeMetaTypes const * const...>::type edge_meta_data) noexcept;
 
-    degree_t nE(void) const noexcept;
+    void insertVertexData(VertexMetaTypes const * const... vertex_meta_data) noexcept;
 
-    const vid_t* src(void) const noexcept;
+    template <unsigned N>
+    void insertVertexData(typename xlib::SelectType<N, VertexMetaTypes const * const...>::type vertex_meta_data) noexcept;
 
-    const vid_t* dst(void) const noexcept;
+    vid_t nV() const noexcept;
 
-    //SoAPtr<EdgeMetaTypes const...>   edge_meta_data_ptr(void) const noexcept;
+    degree_t nE() const noexcept;
+
+    const degree_t* csr_offsets() const noexcept;
+
+    const vid_t* csr_edges() const noexcept;
+
+    SoAPtr<degree_t const, VertexMetaTypes const...> vertex_data_ptr(void) const noexcept;
+
+    SoAPtr<vid_t const, EdgeMetaTypes const...>   edge_data_ptr(void) const noexcept;
+
 };
 
-}
+} // namespace hornet
 
-#include "BatchUpdate.i.hpp"
+#include "HornetInit.i.cuh"
