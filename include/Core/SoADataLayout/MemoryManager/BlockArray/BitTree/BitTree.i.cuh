@@ -255,6 +255,12 @@ statistics() const noexcept {
               << "\n       NUM_WORDS: " << _num_words << "\n\n";
 }
 
+int
+BitTree::
+get_log_block_items() const noexcept {
+    return _log_block_items;
+}
+
 //==============================================================================
 
 }

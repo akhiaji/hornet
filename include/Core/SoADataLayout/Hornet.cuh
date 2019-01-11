@@ -39,6 +39,7 @@
 #include "HornetDevice/HornetDevice.cuh"
 #include "Core/SoADataLayout/HornetInitialize/HornetInit.cuh"
 #include "BatchUpdate/BatchUpdate.cuh"
+#include "MemoryManager/BlockArray/BlockArray.cuh"
 
 namespace hornet {
 namespace gpu {
@@ -83,15 +84,17 @@ private:
 
     HornetDeviceT device(void);
 
-    void reallocate_vertices(BatchUpdate<TypeList<vid_t, vid_t, EdgeMetaTypes...>, degree_t>& batch, const bool is_insert);
+    void reallocate_vertices(gpu::BatchUpdate<TypeList<vid_t, vid_t, EdgeMetaTypes...>, degree_t>& batch, const bool is_insert);
 
-    void appendBatchEdges(BatchUpdate<TypeList<vid_t, vid_t, EdgeMetaTypes...>, degree_t>& batch);
+    void appendBatchEdges(gpu::BatchUpdate<TypeList<vid_t, vid_t, EdgeMetaTypes...>, degree_t>& batch);
 
 public:
 
     Hornet(HInitT& h_init) noexcept;
 
-    void insert(BatchUpdate<TypeList<vid_t, vid_t, EdgeMetaTypes...>, degree_t>& batch, bool removeBatchDuplicates = false, bool removeGraphDuplicates = false);
+    void insert(gpu::BatchUpdate<TypeList<vid_t, vid_t, EdgeMetaTypes...>, degree_t>& batch, bool removeBatchDuplicates = false, bool removeGraphDuplicates = false);
+
+    void print(void);
 };
 
 #define HORNET Hornet<TypeList<VertexMetaTypes...>,\

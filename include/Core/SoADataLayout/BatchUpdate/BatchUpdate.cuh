@@ -48,6 +48,21 @@
 #include <Device/Util/DeviceQueue.cuh>
 #include "BatchUpdateKernels.cuh"
 
+#define CUDA_TRY( call ) 									                            \
+{                                                                     \
+    cudaError_t cudaStatus = call;                                    \
+    if ( cudaSuccess != cudaStatus )                                  \
+    {                                                                 \
+        std::cerr << "ERROR: CUDA Runtime call " << #call             \
+                  << " in line " << __LINE__                            \
+                  << " of file " << __FILE__                            \
+                  << " failed with " << cudaGetErrorString(cudaStatus)  \
+                  << " (" << cudaStatus << ").\n";                     \
+    }												                                          \
+}                                                                                                  
+
+#define CUDA_CHECK_LAST() CUDA_TRY(cudaPeekAtLastError())
+
 
 namespace hornet {
 
@@ -174,30 +189,30 @@ class BatchUpdate<
     void
     get_reallocate_vertices_meta_data(
             hornet::HornetDevice<TypeList<VertexMetaTypes...>, TypeList<EdgeMetaTypes...>, vid_t, degree_t>& hornet_device,
-            vid_t * &realloc_src,
             SoAPtr<degree_t, xlib::byte_t*, degree_t, degree_t>& h_realloc_v_data,
             SoAPtr<degree_t, xlib::byte_t*, degree_t, degree_t>& h_new_v_data,
             SoAPtr<degree_t, xlib::byte_t*, degree_t, degree_t>& d_realloc_v_data,
             SoAPtr<degree_t, xlib::byte_t*, degree_t, degree_t>& d_new_v_data,
             degree_t& reallocated_vertices_count,
-            const bool is_insert) noexcept;
+            const bool is_insert);
 
     template <typename... VertexMetaTypes>
     void
     move_adjacency_lists(
-            vid_t * const realloc_src,
+            hornet::HornetDevice<TypeList<VertexMetaTypes...>, TypeList<EdgeMetaTypes...>, vid_t, degree_t>& hornet_device,
             SoAPtr<degree_t, xlib::byte_t*, degree_t, degree_t, VertexMetaTypes...> vertex_access_ptr,
             SoAPtr<degree_t, xlib::byte_t*, degree_t, degree_t>& h_realloc_v_data,
             SoAPtr<degree_t, xlib::byte_t*, degree_t, degree_t>& h_new_v_data,
             SoAPtr<degree_t, xlib::byte_t*, degree_t, degree_t>& d_realloc_v_data,
-            SoAPtr<degree_t, xlib::byte_t*, degree_t, degree_t>& d_new_v_data) noexcept;
+            SoAPtr<degree_t, xlib::byte_t*, degree_t, degree_t>& d_new_v_data,
+            const degree_t reallocated_vertices_count);
 
+    template <typename... VertexMetaTypes>
     void
-    get_batch_meta_data(
-            vid_t * &unique_src,
-            degree_t * &batch_offsets,
-            degree_t * &batch_old_degrees,
-            CSoAPtr<TypeList<vid_t, EdgeMetaTypes...>> &edge_ptr) noexcept;
+    appendBatchEdges(
+            hornet::HornetDevice<TypeList<VertexMetaTypes...>, TypeList<EdgeMetaTypes...>, vid_t, degree_t>& hornet_device) noexcept;
+
+    void print(void) noexcept;
 };
 
 }

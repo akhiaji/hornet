@@ -106,6 +106,15 @@ class Edge<
         (N < sizeof...(EdgeMetaTypes)),
         typename xlib::SelectType<N, EdgeMetaTypes&...>::type>::type
     field(void) const;
+
+    HOST_DEVICE
+    Edge<TypeList<VertexMetaTypes...>, TypeList<EdgeMetaTypes...>, vid_t, degree_t>&
+    operator=(const SoARef<EdgeContainerT>& source_edge) noexcept;
+
+    HOST_DEVICE
+    Edge<TypeList<VertexMetaTypes...>, TypeList<EdgeMetaTypes...>, vid_t, degree_t>&
+    operator=
+    (const Edge<TypeList<VertexMetaTypes...>, TypeList<EdgeMetaTypes...>, vid_t, degree_t>& source_edge) noexcept;
 };
 
 }

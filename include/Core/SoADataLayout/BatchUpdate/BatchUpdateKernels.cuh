@@ -3,7 +3,7 @@
 template <typename HornetDeviceT, typename vid_t, typename degree_t>
 __global__
 void get_vertex_degrees_kernel(
-        HornetDeviceT& hornet,
+        HornetDeviceT hornet,
         const vid_t * __restrict__ vertex_id,
         const size_t vertex_id_count,
         degree_t *    __restrict__ vertex_degrees) {
@@ -33,8 +33,8 @@ void mark_duplicate_edges_kernel(
         const degree_t * __restrict__ batch_offsets,//
         const vid_t    * __restrict__ unique_src_ids,//
         SoAPtrT                          batch_edges,
-        const degree_t * __restrict__ duplicate_flag) {
-    const vid_t * batch_dst_ids = batch_edges.template get<0>();
+        degree_t * __restrict__ duplicate_flag) {
+    const vid_t * batch_dst_ids = batch_edges.template get<1>();
     const auto& lambda = [&] (int pos, degree_t offset) {
                     auto     vertex = hornet.vertex(unique_src_ids[pos]);
                     assert(offset < vertex.degree());
@@ -50,7 +50,7 @@ void mark_duplicate_edges_kernel(
                         duplicate_flag[start + found] = 0;
                     }
                 };
-    xlib::binarySearchLB<BLOCK_SIZE>(graph_offsets, graph_offsets_count, nullptr, lambda);
+    xlib::simpleBinarySearchLB<BLOCK_SIZE>(graph_offsets, graph_offsets_count, nullptr, lambda);
 }
 
 //Sets false to all locations in duplicate_flag if the corresponding batch_dst_ids
@@ -66,8 +66,8 @@ void mark_duplicate_edges(
         thrust::device_vector<degree_t>& duplicate_flag,
         const degree_t total_work) {
     const unsigned BLOCK_SIZE = 128;
-    int smem = xlib::DeviceProperty::smem_per_block<degree_t>(BLOCK_SIZE);
-    int num_blocks = xlib::ceil_div(total_work, smem);
+    //int smem = xlib::DeviceProperty::smem_per_block<degree_t>(BLOCK_SIZE);
+    int num_blocks = xlib::ceil_div(total_work, BLOCK_SIZE);
     mark_duplicate_edges_kernel<BLOCK_SIZE>
         <<< num_blocks, BLOCK_SIZE >>>(
                 hornet,
@@ -75,11 +75,12 @@ void mark_duplicate_edges(
                 graph_offsets.data().get(),
                 batch_offsets.data().get(),
                 vertex_ids.data().get(),
-                batch_edges.template get_tail(),
+                batch_edges,
                 duplicate_flag.data().get());
 }
 
 template <typename CSoAPtrT, typename degree_t>
+__global__
 void write_unique_edges_kernel(
         CSoAPtrT in,
         CSoAPtrT out,
@@ -165,34 +166,50 @@ void move_adjacency_lists_kernel(
         SoAPtrT d_realloc_v_data,
         SoAPtrT d_new_v_data,
         const degree_t* __restrict__ graph_offsets,
-        const size_t graph_offsets_count) {
-    using EdgePtrT = HornetDeviceT::VertexT::EdgeT::EdgeContainerT;
+        int graph_offsets_count) {
+    using EdgePtrT = typename HornetDeviceT::VertexT::EdgeT::EdgeContainerT;
     const auto& lambda = [&] (int pos, degree_t offset) {
         auto realloc_ref = d_realloc_v_data[pos];
         auto new_ref = d_new_v_data[pos];
         EdgePtrT r_eptr(realloc_ref. template get<1>(), realloc_ref. template get<3>());
         EdgePtrT n_eptr(new_ref. template get<1>(), new_ref. template get<3>());
-        n_ptr[new_ref. template get<2>() + offset] = r_eptr[realloc_ref. template get<2>() + offset];
+        n_eptr[new_ref. template get<2>() + offset] = r_eptr[realloc_ref. template get<2>() + offset];
     };
-    xlib::binarySearchLB<BLOCK_SIZE>(graph_offsets, graph_offsets_count, nullptr, lambda);
+    xlib::simpleBinarySearchLB<BLOCK_SIZE>(graph_offsets, graph_offsets_count, nullptr, lambda);
 }
 
-template <typename vid_, typename degree_t, typename SoAPtrT>
+template <typename vid_t, typename degree_t, typename VAccessPtr, typename VMetaData>
 __global__
 void set_vertex_meta_data(
         vid_t * const realloc_src,
-        SoAPtr<degree_t, xlib::byte_t*, degree_t, degree_t, VertexMetaTypes...> vertex_access_ptr,
-        SoAPtr<degree_t, xlib::byte_t*, degree_t, degree_t> d_new_v_data,
-        const degree_t reallocated_vertices_count) noexcept {
+        VAccessPtr vertex_access_ptr,
+        VMetaData d_new_v_data,
+        const degree_t reallocated_vertices_count) {
     size_t     id = blockIdx.x * blockDim.x + threadIdx.x;
     size_t stride = gridDim.x * blockDim.x;
 
     for (auto i = id; i < reallocated_vertices_count; i += stride) {
-        auto old_ref = vertex_access_ptr[realloc_src[i]];
-        auto new_ref = d_new_v_data[i];
+        auto new_ref = vertex_access_ptr[realloc_src[i]];
+        auto old_ref = d_new_v_data[i];
         new_ref.template get<0>() = old_ref.template get<0>();
         new_ref.template get<1>() = old_ref.template get<1>();
         new_ref.template get<2>() = old_ref.template get<2>();
         new_ref.template get<3>() = old_ref.template get<3>();
     }
+}
+
+template <int BLOCK_SIZE, typename HornetDeviceT, typename vid_t, typename degree_t, typename SoAPtrT>
+__global__
+void appendBatchEdgesKernel(
+        HornetDeviceT hornet,
+        const vid_t    * __restrict__ unique_src_ids,//
+        const degree_t * __restrict__ batch_offsets,//
+        const degree_t * __restrict__ old_degree,//
+        const size_t batch_offsets_count,//
+        SoAPtrT                          batch_edges) {
+    const auto& lambda = [&] (int pos, degree_t offset) {
+        auto vertex = hornet.vertex(unique_src_ids[pos]);
+        vertex.edge(old_degree[pos] + offset) = batch_edges[batch_offsets[pos] + offset];
+    };
+    xlib::simpleBinarySearchLB<BLOCK_SIZE>(batch_offsets, batch_offsets_count, nullptr, lambda);
 }

@@ -82,27 +82,15 @@ class Vertex<
     HOST_DEVICE
     Vertex(HornetDeviceT& hornet, const vid_t id);
 
-    HOST_DEVICE
-    degree_t edges_per_block(void) const;
-
-    HOST_DEVICE
-    degree_t vertex_offset(void) const;
-
-    HOST_DEVICE
-    xlib::byte_t* edge_block_ptr(void) const;
-
-    HOST_DEVICE
-    degree_t limit(void) const;
-
-    HOST_DEVICE
-    void set_degree(degree_t new_degree) const;
-
     public:
     HOST_DEVICE
     vid_t id(void) const;
 
     HOST_DEVICE
     degree_t degree(void) const;
+
+    HOST_DEVICE
+    degree_t limit(void) const;
 
     template<unsigned N>
     HOST_DEVICE
@@ -114,6 +102,19 @@ class Vertex<
     HOST_DEVICE
     EdgeT
     edge(const degree_t index) const;
+
+    HOST_DEVICE
+    degree_t edges_per_block(void) const;
+
+    HOST_DEVICE
+    degree_t vertex_offset(void) const;
+
+    HOST_DEVICE
+    xlib::byte_t* edge_block_ptr(void) const;
+
+    HOST_DEVICE
+    void set_degree(degree_t new_degree) const;
+
 };
 
 }

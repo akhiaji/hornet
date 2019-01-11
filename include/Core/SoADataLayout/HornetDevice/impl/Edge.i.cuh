@@ -96,5 +96,23 @@ EDGE::field(void) const {
     return _ref.template get<N+1>();
 }
 
+template <typename... VertexMetaTypes, typename... EdgeMetaTypes,
+    typename vid_t, typename degree_t>
+HOST_DEVICE
+EDGE&
+EDGE::operator=(const SoARef<EdgeContainerT>& source_edge) noexcept {
+    _ref = source_edge;
+    return *this;
+}
+
+template <typename... VertexMetaTypes, typename... EdgeMetaTypes,
+    typename vid_t, typename degree_t>
+HOST_DEVICE
+EDGE&
+EDGE::operator=(const EDGE& source_edge) noexcept {
+    _ref = source_edge._ref;
+    return *this;
+}
+
 #undef EDGE
 }

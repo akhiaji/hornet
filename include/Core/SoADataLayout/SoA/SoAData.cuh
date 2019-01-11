@@ -40,6 +40,7 @@
 #include <Device/Util/SafeCudaAPISync.cuh>
 #include <thrust/device_vector.h>
 #include <thrust/gather.h>
+#include <vector>
 
 namespace hornet {
 
@@ -127,6 +128,19 @@ class CSoAData<TypeList<Ts...>, device_t> {
 
     DeviceType get_device_type(void) noexcept;
 };
+
+
+template<typename... Ts>
+void print(SoAData<TypeList<Ts...>, DeviceType::HOST>& data);
+
+template<typename... Ts>
+void print(SoAData<TypeList<Ts...>, DeviceType::DEVICE>& data);
+
+template<typename... Ts>
+void print(CSoAData<TypeList<Ts...>, DeviceType::HOST>& data);
+
+template<typename... Ts>
+void print(CSoAData<TypeList<Ts...>, DeviceType::DEVICE>& data);
 
 }
 

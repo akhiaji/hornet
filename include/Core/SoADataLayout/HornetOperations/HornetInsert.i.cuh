@@ -14,21 +14,23 @@ template <typename... VertexMetaTypes, typename... EdgeMetaTypes,
 void
 HORNET::
 insert(BatchUpdate<TypeList<vid_t, vid_t, EdgeMetaTypes...>, degree_t>& batch, bool removeBatchDuplicates, bool removeGraphDuplicates) {
+    auto hornet_device = device();
     //Preprocess batch according to user preference
-    batch.preprocess(device(), removeBatchDuplicates, removeGraphDuplicates);
+    batch.preprocess(
+            hornet_device, removeBatchDuplicates, removeGraphDuplicates);
 
     reallocate_vertices(batch, true);
 
-    appendBatchEdges(batch);
+    batch.appendBatchEdges(hornet_device);
 }
 
 template <typename... VertexMetaTypes, typename... EdgeMetaTypes,
     typename vid_t, typename degree_t>
 void
 HORNET::
-reallocate_vertices(BatchUpdate<TypeList<vid_t, vid_t, EdgeMetaTypes...>, degree_t>& batch,
+reallocate_vertices(gpu::BatchUpdate<TypeList<vid_t, vid_t, EdgeMetaTypes...>, degree_t>& batch,
         const bool is_insert) {
-    vid_t * r_vertex_id;
+    if (_nE == 0) { return; }
     SoAPtr<degree_t, xlib::byte_t*, degree_t, degree_t> h_realloc_v_data;
     SoAPtr<degree_t, xlib::byte_t*, degree_t, degree_t> h_new_v_data;
     SoAPtr<degree_t, xlib::byte_t*, degree_t, degree_t> d_realloc_v_data;
@@ -36,12 +38,14 @@ reallocate_vertices(BatchUpdate<TypeList<vid_t, vid_t, EdgeMetaTypes...>, degree
     degree_t reallocated_vertices_count;
 
     //Get list of vertices that need to be reallocated
-    //realloc_vertex_meta_data contains old adjacency list information.
+    //realloc_vertex_meta_data contains old adjacency list information. This is used by appendBatchEdges.
     //new_vertex_meta_data contains buffer to store new adjacency list information from block array manager calls below
 
+    auto hornet_device = device();
     batch.get_reallocate_vertices_meta_data(
-            device(), r_vertex_id, h_realloc_v_data, h_new_v_data, d_realloc_v_data, d_new_v_data, reallocated_vertices_count, is_insert);
+            hornet_device, h_realloc_v_data, h_new_v_data, d_realloc_v_data, d_new_v_data, reallocated_vertices_count, is_insert);
 
+    CUDA_CHECK_LAST()
     for (degree_t i = 0; i < reallocated_vertices_count; i++) {
         auto ref = h_new_v_data[i];
         auto access_data = _ba_manager.insert(ref.template get<0>());
@@ -50,28 +54,16 @@ reallocate_vertices(BatchUpdate<TypeList<vid_t, vid_t, EdgeMetaTypes...>, degree
         ref.template get<3>() = access_data.edges_per_block;
     }
 
-    //Move adjacency list and edit vertex access data
-    batch.move_adjacency_lists(device(), r_vertex_id, _vertex_data.get_soa_ptr(), h_realloc_v_data, h_new_v_data, d_realloc_v_data, d_new_v_data, reallocated_vertices_count);
+    ////Move adjacency list and edit vertex access data
+    batch.move_adjacency_lists(hornet_device, _vertex_data.get_soa_ptr(), h_realloc_v_data, h_new_v_data, d_realloc_v_data, d_new_v_data, reallocated_vertices_count);
 
+    CUDA_CHECK_LAST()
     for (degree_t i = 0; i < reallocated_vertices_count; i++) {
         auto ref = h_realloc_v_data[i];
         _ba_manager.remove(ref.template get<0>(), ref.template get<1>(), ref.template get<2>());
     }
+    CUDA_CHECK_LAST()
 
-}
-
-template <typename... VertexMetaTypes, typename... EdgeMetaTypes,
-    typename vid_t, typename degree_t>
-void
-HORNET::
-appendBatchEdges(BatchUpdate<TypeList<vid_t, vid_t, EdgeMetaTypes...>, degree_t>& batch) {
-    vid_t * batch_sources;
-    degree_t * batch_offsets;
-    degree_t * batch_old_degrees;
-    CSoAPtr<TypeList<vid_t, EdgeMetaTypes...>> edge_ptr;
-    batch.get_batch_meta_data(batch_sources, batch_offsets, batch_old_degrees, edge_ptr);
-
-    //TODO : bulkCopyAdjLists
 }
 
 }

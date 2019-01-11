@@ -33,6 +33,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  * </blockquote>}
  */
+
 namespace hornet {
 
 //==============================================================================
@@ -309,6 +310,94 @@ struct RecursiveCopy<N, N> {
                 src.template get<N>(), src_device_type,
                 dst.template get<N>(), dst_device_type,
                 num_items);
+    }
+};
+
+//==============================================================================
+///////////////////
+// RecursivePrint //
+///////////////////
+
+struct DevicePrint {
+    template<typename T>
+    static void print(
+            T * src,
+            DeviceType src_device_type,
+            int num_items) {
+        if (src_device_type == DeviceType::DEVICE) {
+            //thrust::device_vector<T> temp_data(num_items);
+            //thrust::copy(src, src + num_items, temp_data.begin());
+            //thrust::copy(temp_data.begin(), temp_data.end(), std::ostream_iterator<T>(std::cout, " "));
+            //std::vector<T> temp_data(num_items);
+        } else if (src_device_type == DeviceType::HOST) {
+            for (int i = 0; i < num_items; ++i) {
+                std::cout<<src[i]<<" ";
+            }
+        }
+    }
+};
+
+template<int N, int SIZE>
+struct RecursivePrint {
+    template<
+        template <typename...> typename SrcContnr,
+        typename... Ts>
+    static void print(
+            const SrcContnr<Ts...>& src,
+            const DeviceType src_device_type,
+            const int num_items) {
+        std::cout<<"N : "<<N<<" | ";
+        DevicePrint::print(
+                src.template get<N>(), src_device_type,
+                num_items);
+        std::cout<<"\n";
+        RecursivePrint<N + 1, SIZE>::print(src, src_device_type, num_items);
+    }
+
+    template<
+        template <typename...> typename SrcContnr,
+        typename... Ts>
+    static void print(
+            const SrcContnr<Ts const...>& src,
+            const DeviceType src_device_type,
+            const int num_items) {
+        std::cout<<"N : "<<N<<" | ";
+        DevicePrint::print(
+                src.template get<N>(), src_device_type,
+                num_items);
+        std::cout<<"\n";
+        RecursivePrint<N + 1, SIZE>::print(src, src_device_type, num_items);
+    }
+};
+
+template<int N>
+struct RecursivePrint<N, N> {
+    template<
+        template <typename...> typename SrcContnr,
+        typename... Ts>
+    static void print(
+            const SrcContnr<Ts...>& src,
+            const DeviceType src_device_type,
+            const int num_items) {
+        std::cout<<"N : "<<N<<" | ";
+        DevicePrint::print(
+                src.template get<N>(), src_device_type,
+                num_items);
+        std::cout<<"\n";
+    }
+
+    template<
+        template <typename...> typename SrcContnr,
+        typename... Ts>
+    static void print(
+            const SrcContnr<Ts const...>& src,
+            const DeviceType src_device_type,
+            const int num_items) {
+        std::cout<<"N : "<<N<<" | ";
+        DevicePrint::print(
+                src.template get<N>(), src_device_type,
+                num_items);
+        std::cout<<"\n";
     }
 };
 
@@ -605,6 +694,34 @@ DeviceType
 CSoAData<TypeList<Ts...>, device_t>::
 get_device_type(void) noexcept {
     return device_t;
+}
+
+//==============================================================================
+//print data
+
+
+template<typename... Ts>
+void print(SoAData<TypeList<Ts...>, DeviceType::HOST>& data) {
+    auto ptr = data.get_soa_ptr();
+    RecursivePrint<0, sizeof...(Ts) - 1>::print(ptr, data.get_num_items());
+}
+
+template<typename... Ts>
+void print(SoAData<TypeList<Ts...>, DeviceType::DEVICE>& data) {
+    auto ptr = data.get_soa_ptr();
+    RecursivePrint<0, sizeof...(Ts) - 1>::print(ptr, data.get_num_items());
+}
+
+template<typename... Ts>
+void print(CSoAData<TypeList<Ts...>, DeviceType::HOST>& data) {
+    auto ptr = data.get_soa_ptr();
+    RecursivePrint<0, sizeof...(Ts) - 1>::print(ptr, data.get_num_items());
+}
+
+template<typename... Ts>
+void print(CSoAData<TypeList<Ts...>, DeviceType::DEVICE>& data) {
+    auto ptr = data.get_soa_ptr();
+    RecursivePrint<0, sizeof...(Ts) - 1>::print(ptr, data.get_num_items());
 }
 
 //==============================================================================

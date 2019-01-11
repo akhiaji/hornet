@@ -237,51 +237,105 @@ get_tail(void) noexcept {
 //////////////////////
 
 
-template<typename... Ts>
+template<typename T, typename... Ts>
 HOST_DEVICE
-CSoAPtr<Ts...>::
+CSoAPtr<T, Ts...>::
 CSoAPtr(void) noexcept :
 _ptr(nullptr), _num_items(0) {}
 
-template<typename... Ts>
+template<typename T, typename... Ts>
 HOST_DEVICE
-CSoAPtr<Ts...>::
+CSoAPtr<T, Ts...>::
 CSoAPtr(xlib::byte_t* const ptr, const int num_items) noexcept :
 _ptr(ptr),
 _num_items(num_items) {}
 
-template<typename... Ts>
+template<typename T, typename... Ts>
 template<unsigned N>
 HOST_DEVICE
-typename std::enable_if<(N < sizeof...(Ts)),
-         typename xlib::SelectType<N, Ts*...>::type
+typename std::enable_if<(N < (1 + sizeof...(Ts))),
+         typename xlib::SelectType<N, T*, Ts*...>::type
          >::type
-CSoAPtr<Ts...>::
+CSoAPtr<T, Ts...>::
 get() noexcept {
-    return reinterpret_cast<typename xlib::SelectType<N, Ts*...>::type>(
-            _ptr + xlib::FirstNSizeSum<N, Ts...>::value * _num_items);
+    return reinterpret_cast<typename xlib::SelectType<N, T*, Ts*...>::type>(
+            _ptr + xlib::FirstNSizeSum<N, T, Ts...>::value * _num_items);
 }
 
-template<typename... Ts>
+template<typename T, typename... Ts>
 template<unsigned N>
 HOST_DEVICE
-typename std::enable_if<(N < sizeof...(Ts)),
-         typename xlib::SelectType<N, Ts const*...>::type
+typename std::enable_if<(N < (1 + sizeof...(Ts))),
+         typename xlib::SelectType<N, T const *, Ts const *...>::type
          >::type
-CSoAPtr<Ts...>::
+CSoAPtr<T, Ts...>::
 get() const noexcept {
-    return reinterpret_cast<typename xlib::SelectType<N, Ts*...>::type>(
-            _ptr + xlib::FirstNSizeSum<N, Ts...>::value * _num_items);
+    return reinterpret_cast<typename xlib::SelectType<N, T const *, Ts const *...>::type>(
+            _ptr + xlib::FirstNSizeSum<N, T, Ts...>::value * _num_items);
 }
 
-template<typename... Ts>
+template<typename T, typename... Ts>
 HOST_DEVICE
-SoARef<CSoAPtr<Ts...>>
-CSoAPtr<Ts...>::
+SoARef<CSoAPtr<T, Ts...>>
+CSoAPtr<T, Ts...>::
 operator[](const int& index)  noexcept {
-    return SoARef<CSoAPtr<Ts...>>(*this, index);
+    return SoARef<CSoAPtr<T, Ts...>>(*this, index);
 }
 
+template<typename T, typename... Ts>
+HOST_DEVICE
+CSoAPtr<Ts...>
+CSoAPtr<T, Ts...>::
+get_tail(void) noexcept {
+    return CSoAPtr<Ts...>(reinterpret_cast<xlib::byte_t*>(get<1>()), _num_items);
+}
+
+//==============================================================================
+//////////////////////
+// CSoAPtr<T> //
+//////////////////////
+
+
+template<typename T>
+HOST_DEVICE
+CSoAPtr<T>::
+CSoAPtr(void) noexcept :
+_ptr(nullptr), _num_items(0) {}
+
+template<typename T>
+HOST_DEVICE
+CSoAPtr<T>::
+CSoAPtr(xlib::byte_t* const ptr, const int num_items) noexcept :
+_ptr(ptr),
+_num_items(num_items) {}
+
+template<typename T>
+template<unsigned N>
+HOST_DEVICE
+typename std::enable_if<(N == 0), T*>::type
+CSoAPtr<T>::
+get() noexcept {
+    return reinterpret_cast<T*>(_ptr);
+}
+
+template<typename T>
+template<unsigned N>
+HOST_DEVICE
+typename std::enable_if<(N == 0), T const *>::type
+CSoAPtr<T>::
+get() const noexcept {
+    return reinterpret_cast<T const *>(_ptr);
+}
+
+template<typename T>
+HOST_DEVICE
+SoARef<CSoAPtr<T>>
+CSoAPtr<T>::
+operator[](const int& index)  noexcept {
+    return SoARef<CSoAPtr<T>>(*this, index);
+}
+
+//==============================================================================
 //==============================================================================
 
 }//namespace hornet

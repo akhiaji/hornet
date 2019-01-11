@@ -108,7 +108,7 @@ reset(BatchUpdatePtr<TypeList<vid_t, vid_t, EdgeMetaTypes...>, degree_t, device_
     _edge[0].resize(_nE);
     _edge[1].resize(_nE);
     unique_sources.resize(_nE);
-    unique_degrees.resize(_nE);
+    unique_degrees.resize(_nE + 1);
     duplicate_flag.resize(_nE + 1);
     cub_runlength.resize(_nE);
     batch_offsets.resize(_nE + 1);
@@ -314,6 +314,7 @@ template <typename... EdgeMetaTypes,
 void
 BATCH_UPDATE::
 remove_batch_duplicates(void) noexcept {
+    if (_nE == 0) { return; }
     auto in_ptr = in_edge().get_soa_ptr();
     auto out_ptr = out_edge().get_soa_ptr();
     remove_duplicates(in_ptr, out_ptr, _nE, in_range(), out_range());
@@ -327,6 +328,7 @@ void
 BATCH_UPDATE::
 remove_graph_duplicates(
         hornet::HornetDevice<TypeList<VertexMetaTypes...>, TypeList<EdgeMetaTypes...>, vid_t, degree_t>& hornet_device) noexcept {
+    if (_nE == 0) { return; }
     _nE = in_edge().get_num_items();
     //Get unique sources and degrees
     duplicate_flag.resize(_nE + 1);
@@ -376,7 +378,6 @@ get_unique_sources_meta_data(
 
     unique_sources.resize(_nE);
     unique_degrees.resize(_nE);
-    batch_offsets.resize(_nE + 1);
     graph_offsets.resize(_nE + 1);
 
     degree_t unique_sources_count = cub_runlength.run(batch_src, nE,
@@ -391,15 +392,14 @@ get_unique_sources_meta_data(
     cub_prefixsum.run(batch_offsets.data().get(), unique_sources_count + 1);
 
     unique_sources.resize(unique_sources_count);
-    batch_offsets.resize(unique_sources_count + 1);
     graph_offsets.resize(unique_sources_count + 1);
 
     //Get degrees of batch sources in hornet graph
     get_vertex_degrees(hornet_device, unique_sources, graph_offsets);
 
-    cub_prefixsum.run(graph_offsets.data().get(), unique_sources_count + 1);
+    cub_prefixsum.run(graph_offsets.data().get(), graph_offsets.size());
 
-    degree_t total_work = graph_offsets[unique_sources_count];
+    degree_t total_work = graph_offsets[graph_offsets.size() - 1];
 
     return total_work;
 }
@@ -421,6 +421,7 @@ preprocess(
         hornet::HornetDevice<TypeList<VertexMetaTypes...>, TypeList<EdgeMetaTypes...>, vid_t, degree_t>& hornet_device,
         bool removeBatchDuplicates,
         bool removeGraphDuplicates) noexcept {
+    if (_nE == 0) { return; }
     sort();
     if (removeBatchDuplicates) {
         remove_batch_duplicates();
@@ -437,13 +438,12 @@ void
 BATCH_UPDATE::
 get_reallocate_vertices_meta_data(
         hornet::HornetDevice<TypeList<VertexMetaTypes...>, TypeList<EdgeMetaTypes...>, vid_t, degree_t>& hornet_device,
-        vid_t * &realloc_src,
         SoAPtr<degree_t, xlib::byte_t*, degree_t, degree_t>& h_realloc_v_data,
         SoAPtr<degree_t, xlib::byte_t*, degree_t, degree_t>& h_new_v_data,
         SoAPtr<degree_t, xlib::byte_t*, degree_t, degree_t>& d_realloc_v_data,
         SoAPtr<degree_t, xlib::byte_t*, degree_t, degree_t>& d_new_v_data,
         degree_t& reallocated_vertices_count,
-        const bool is_insert) noexcept {
+        const bool is_insert) {
 
     vertex_access[0].resize(_nE);
     vertex_access[1].resize(_nE);
@@ -452,21 +452,24 @@ get_reallocate_vertices_meta_data(
 
     vid_t * batch_src = in_edge().get_soa_ptr().template get<0>();
     unique_sources.resize(_nE);
-    unique_degrees.resize(_nE);
-    if (is_insert) {
-        graph_offsets.resize(_nE);//contains degrees of batch vertices in graph
-    }
+    unique_degrees.resize(_nE + 1);
 
     degree_t unique_sources_count = cub_runlength.run(batch_src, _nE,
             unique_sources.data().get(), unique_degrees.data().get());
-
+    if (unique_sources_count == 0) { return; }
     realloc_sources.resize(unique_sources_count);
+    unique_degrees.resize(unique_sources_count + 1);
+
+    if (is_insert) {
+        graph_offsets.resize(unique_sources_count + 1);//contains degrees of batch vertices in graph
+    }
 
     d_realloc_v_data = vertex_access[0].get_soa_ptr();
     d_new_v_data = vertex_access[1].get_soa_ptr();
     h_realloc_v_data = host_vertex_access[0].get_soa_ptr();
     h_new_v_data = host_vertex_access[1].get_soa_ptr();
 
+    degree_t * old_degree = graph_offsets.data().get();
     const int BLOCK_SIZE = 128;
     buildReallocateVerticesQueue
         <<< xlib::ceil_div<BLOCK_SIZE>(unique_sources_count), BLOCK_SIZE >>>
@@ -477,7 +480,7 @@ get_reallocate_vertices_meta_data(
          d_new_v_data,
          realloc_sources_count_buffer.data().get(),
          is_insert,
-         is_insert ? graph_offsets.data().get() : nullptr
+         is_insert ? old_degree : nullptr
         );
     reallocated_vertices_count = realloc_sources_count_buffer[0];
     RecursiveCopy<0, 3>::copy(
@@ -488,6 +491,14 @@ get_reallocate_vertices_meta_data(
             d_new_v_data. template get<0>(), DeviceType::DEVICE,
             h_new_v_data. template get<0>(), DeviceType::HOST,
             reallocated_vertices_count);
+    {
+#if 0
+        int count = reallocated_vertices_count;
+        RecursivePrint<0, 3>::print(h_new_v_data, DeviceType::HOST, count);
+        RecursivePrint<0, 3>::print(h_realloc_v_data, DeviceType::HOST, count);
+#endif
+    }
+    realloc_sources.resize(reallocated_vertices_count);
 }
 
 template <typename... EdgeMetaTypes,
@@ -497,59 +508,95 @@ void
 BATCH_UPDATE::
 move_adjacency_lists(
         hornet::HornetDevice<TypeList<VertexMetaTypes...>, TypeList<EdgeMetaTypes...>, vid_t, degree_t>& hornet_device,
-        vid_t * const realloc_src,
         SoAPtr<degree_t, xlib::byte_t*, degree_t, degree_t, VertexMetaTypes...> vertex_access_ptr,
         SoAPtr<degree_t, xlib::byte_t*, degree_t, degree_t>& h_realloc_v_data,
         SoAPtr<degree_t, xlib::byte_t*, degree_t, degree_t>& h_new_v_data,
         SoAPtr<degree_t, xlib::byte_t*, degree_t, degree_t>& d_realloc_v_data,
         SoAPtr<degree_t, xlib::byte_t*, degree_t, degree_t>& d_new_v_data,
-        const degree_t reallocated_vertices_count) noexcept {
+        const degree_t reallocated_vertices_count) {
     //Get reallocated block data to device
-    RecursiveCopy<1, 4>::copy(
+    RecursiveCopy<1, 3>::copy(
             h_new_v_data, DeviceType::HOST,
             d_new_v_data, DeviceType::DEVICE,
             reallocated_vertices_count);
+    CUDA_CHECK_LAST()
 
     //Get offsets for binarySearchLB kernel
-    graph_offsets.resize(reallocated_vertices_count + 1);
+    duplicate_flag.resize(reallocated_vertices_count + 1);
     DeviceCopy::copy(
             d_realloc_v_data. template get<0>(), DeviceType::DEVICE,
-            graph_offsets.data().get(), DeviceType::DEVICE,
+            duplicate_flag.data().get(), DeviceType::DEVICE,
             reallocated_vertices_count);
+    CUDA_CHECK_LAST()
     cub_prefixsum.run(d_realloc_v_data. template get<0>(),
-            graph_offsets.size(),
-            graph_offsets.data().get());
-    degree_t total_work = graph_offsets[graph_offsets.size() - 1];
+            duplicate_flag.size(),
+            duplicate_flag.data().get());
+    CUDA_CHECK_LAST()
+    degree_t total_work = duplicate_flag[duplicate_flag.size() - 1];
     if (total_work == 0)  { return; }
 
     const int BLOCK_SIZE = 256;
-    int smem = xlib::DeviceProperty::smem_per_block<degree_t>(BLOCK_SIZE);
-    int num_blocks = xlib::ceil_div(total_work, smem);
+    //int smem = xlib::DeviceProperty::smem_per_block<degree_t>(BLOCK_SIZE);
+    int num_blocks = xlib::ceil_div(total_work, BLOCK_SIZE);
+    //TODO what are the pointers inputs to this kernel?
     move_adjacency_lists_kernel<BLOCK_SIZE>
         <<<num_blocks, BLOCK_SIZE>>>(
                 hornet_device,
                 d_realloc_v_data,
                 d_new_v_data,
-                graph_offsets.data().get(),
-                graph_offsets.size());
+                duplicate_flag.data().get(),
+                duplicate_flag.size());
+    CUDA_CHECK_LAST()
     num_blocks = xlib::ceil_div(reallocated_vertices_count, BLOCK_SIZE);
+
     set_vertex_meta_data
         <<<num_blocks, BLOCK_SIZE>>>(
-                realloc_src,
+                realloc_sources.data().get(),
                 vertex_access_ptr,
                 d_new_v_data,
                 reallocated_vertices_count);
+    CUDA_CHECK_LAST()
+}
+
+template <typename... EdgeMetaTypes,
+    typename vid_t, typename degree_t>
+template <typename... VertexMetaTypes>
+void
+BATCH_UPDATE::
+appendBatchEdges(hornet::HornetDevice<TypeList<VertexMetaTypes...>, TypeList<EdgeMetaTypes...>, vid_t, degree_t>& hornet_device) noexcept {
+    if (_nE == 0) { return; }
+    cub_prefixsum.run(unique_degrees.data().get(), unique_degrees.size());
+    degree_t total_work = unique_degrees[unique_degrees.size() - 1];
+
+    degree_t * old_degree = graph_offsets.data().get();
+    const int BLOCK_SIZE = 256;
+    //int smem = xlib::DeviceProperty::smem_per_block<degree_t>(BLOCK_SIZE);
+    int num_blocks = xlib::ceil_div(total_work, BLOCK_SIZE);
+    appendBatchEdgesKernel<BLOCK_SIZE>
+        <<<num_blocks, BLOCK_SIZE>>>(
+                hornet_device,
+                unique_sources.data().get(),
+                unique_degrees.data().get(),
+                old_degree,
+                unique_degrees.size(),
+                in_edge().get_soa_ptr().get_tail());
 }
 
 template <typename... EdgeMetaTypes,
     typename vid_t, typename degree_t>
 void
 BATCH_UPDATE::
-get_batch_meta_data(
-        vid_t * &unique_src,
-        degree_t * &batch_offsets,
-        degree_t * &batch_old_degrees,
-        CSoAPtr<TypeList<vid_t, EdgeMetaTypes...>> &edge_ptr) noexcept {
+print(void) noexcept {
+    auto ptr = in_edge().get_soa_ptr();
+    std::cout<<"src, dst\n";
+    thrust::device_vector<vid_t> src(size());
+    thrust::device_vector<vid_t> dst(size());
+    thrust::copy(ptr.template get<0>(), ptr.template get<0>() + size(), src.begin());
+    thrust::copy(ptr.template get<1>(), ptr.template get<1>() + size(), dst.begin());
+    thrust::copy(src.begin(), src.end(), std::ostream_iterator<vid_t>(std::cout, " "));
+    std::cout<<"\n";
+    thrust::copy(dst.begin(), dst.end(), std::ostream_iterator<vid_t>(std::cout, " "));
+    std::cout<<"\n";
 }
 
 }//namespace gpu

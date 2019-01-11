@@ -33,6 +33,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  * </blockquote>}
  */
+#include "../SoA/SoAData.cuh"
+
 namespace hornet {
 namespace gpu {
 
@@ -127,6 +129,28 @@ initialize(HornetInit<
                 b.second.mem_size());
     }
 
+}
+
+template <typename... VertexMetaTypes, typename... EdgeMetaTypes,
+    typename vid_t, typename degree_t>
+void
+HORNET::
+print(void) {
+    SoAData<
+        TypeList<degree_t, xlib::byte_t*, degree_t, degree_t, VertexMetaTypes...>,
+        DeviceType::HOST> host_vertex_data(_vertex_data.get_num_items());
+    host_vertex_data.copy(_vertex_data);
+    auto ptr = host_vertex_data.get_soa_ptr();
+    for (int i = 0; i < _nV; ++i) {
+        degree_t v_degree = ptr[i].template get<0>();
+        std::cout<<i<<" : "<<v_degree<<" | ";
+        thrust::device_vector<degree_t> dst(v_degree);
+        vid_t * dst_ptr = reinterpret_cast<vid_t*>(ptr[i].template get<1>()) + ptr[i].template get<2>();
+        thrust::copy(dst_ptr, dst_ptr + v_degree, dst.begin());
+        thrust::copy(dst.begin(), dst.end(), std::ostream_iterator<vid_t>(std::cout, " "));
+        std::cout<<"\n";
+
+    }
 }
 
 }

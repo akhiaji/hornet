@@ -131,6 +131,8 @@ public:
      */
     void statistics() const noexcept;
 
+    int get_log_block_items() const noexcept;
+
     //--------------------------------------------------------------------------
 private:
     using word_t = unsigned;

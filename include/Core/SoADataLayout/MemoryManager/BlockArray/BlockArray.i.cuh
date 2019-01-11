@@ -41,7 +41,7 @@ namespace hornet {
 template<typename... Ts, DeviceType device_t>
 BLOCK_ARRAY::
 BlockArray(const int block_items, const int blockarray_items) noexcept :
-_edge_data(block_items), _bit_tree(block_items, blockarray_items) {
+_edge_data(blockarray_items), _bit_tree(block_items, blockarray_items) {
 }
 
 template<typename... Ts, DeviceType device_t>
@@ -68,7 +68,7 @@ template<typename... Ts, DeviceType device_t>
 int
 BLOCK_ARRAY::
 insert(void) noexcept {
-    return _bit_tree.insert();
+    return _bit_tree.insert()<<_bit_tree.get_log_block_items();
 }
 
 template<typename... Ts, DeviceType device_t>
@@ -117,8 +117,8 @@ int find_bin(const degree_t requested_degree) noexcept {
 template<typename... Ts, DeviceType device_t, typename degree_t>
 B_A_MANAGER::
 BlockArrayManager(const degree_t MaxEdgesPerBlockArray) noexcept :
-_MaxEdgesPerBlockArray(xlib::ceil_log2(MaxEdgesPerBlockArray)),
-_largest_eb_size(xlib::ceil_log2(MaxEdgesPerBlockArray)) {
+_MaxEdgesPerBlockArray(1<<xlib::ceil_log2(MaxEdgesPerBlockArray)),
+_largest_eb_size(1<<xlib::ceil_log2(MaxEdgesPerBlockArray)) {
 }
 
 template<typename... Ts, DeviceType device_t, typename degree_t>
@@ -147,10 +147,10 @@ insert(const degree_t requested_degree) noexcept {
             return ea;
         }
     }
-    _largest_eb_size = std::max(xlib::ceil_log2(requested_degree), _largest_eb_size);
+    _largest_eb_size = std::max(1<<xlib::ceil_log2(requested_degree), _largest_eb_size);
     BlockArray<TypeList<Ts...>, device_t> new_block_array(
-            xlib::ceil_log2(requested_degree),
-            std::max(xlib::ceil_log2(requested_degree),
+            1<<xlib::ceil_log2(requested_degree),
+            std::max(1<<xlib::ceil_log2(requested_degree),
             _MaxEdgesPerBlockArray));
     degree_t offset = new_block_array.insert();
     EdgeAccessData<degree_t> ea = {new_block_array.get_blockarray_ptr(), offset, new_block_array.capacity()};
@@ -169,7 +169,7 @@ remove(
     degree_t       vertex_offset) noexcept {
     int bin_index = find_bin(degree);
     auto &ba = _ba_map[bin_index].at(edge_block_ptr);
-    ba.second.remove(vertex_offset);
+    ba.remove(vertex_offset);
 }
 
 template<typename... Ts, DeviceType device_t, typename degree_t>

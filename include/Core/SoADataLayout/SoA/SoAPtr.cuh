@@ -163,9 +163,17 @@ private:
     SoAPtr<Ts...> _tail;
 };
 
+//==============================================================================
+/////////////
+// CSoAPtr //
+/////////////
+
 template<typename... Ts>
+class CSoAPtr;
+
+template<typename T>
 class
-CSoAPtr {
+CSoAPtr<T> {
 public:
     HOST_DEVICE
     explicit CSoAPtr() noexcept;
@@ -175,16 +183,47 @@ public:
 
     template<unsigned N>
     HOST_DEVICE
-    typename std::enable_if<(N < sizeof...(Ts)), typename xlib::SelectType<N, Ts*...>::type>::type
+    typename std::enable_if<(N == 0), T*>::type
     get() noexcept;
 
     template<unsigned N>
     HOST_DEVICE
-    typename std::enable_if<(N < sizeof...(Ts)), typename xlib::SelectType<N, Ts const*...>::type>::type
+    typename std::enable_if<(N == 0), T const *>::type
     get() const noexcept;
 
     HOST_DEVICE
-    SoARef<CSoAPtr<Ts...>> operator[](const int& index) noexcept;
+    SoARef<CSoAPtr<T>> operator[](const int& index) noexcept;
+
+private:
+    xlib::byte_t* _ptr;
+    int           _num_items;
+};
+
+template<typename T, typename... Ts>
+class
+CSoAPtr<T, Ts...> {
+public:
+    HOST_DEVICE
+    explicit CSoAPtr() noexcept;
+
+    HOST_DEVICE
+    explicit CSoAPtr(xlib::byte_t* const ptr, const int num_items) noexcept;
+
+    template<unsigned N>
+    HOST_DEVICE
+    typename std::enable_if<(N < (1 + sizeof...(Ts))), typename xlib::SelectType<N, T*, Ts*...>::type>::type
+    get() noexcept;
+
+    template<unsigned N>
+    HOST_DEVICE
+    typename std::enable_if<(N < (1 + sizeof...(Ts))), typename xlib::SelectType<N, T const*, Ts const*...>::type>::type
+    get() const noexcept;
+
+    HOST_DEVICE
+    SoARef<CSoAPtr<T, Ts...>> operator[](const int& index) noexcept;
+
+    HOST_DEVICE
+    CSoAPtr<Ts...> get_tail(void) noexcept;
 
 private:
     xlib::byte_t* _ptr;
