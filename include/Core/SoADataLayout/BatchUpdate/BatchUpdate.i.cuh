@@ -536,8 +536,8 @@ move_adjacency_lists(
     if (total_work == 0)  { return; }
 
     const int BLOCK_SIZE = 256;
-    //int smem = xlib::DeviceProperty::smem_per_block<degree_t>(BLOCK_SIZE);
-    int num_blocks = xlib::ceil_div(total_work, BLOCK_SIZE);
+    int smem = xlib::DeviceProperty::smem_per_block<degree_t>(BLOCK_SIZE);
+    int num_blocks = xlib::ceil_div(total_work, smem);
     //TODO what are the pointers inputs to this kernel?
     move_adjacency_lists_kernel<BLOCK_SIZE>
         <<<num_blocks, BLOCK_SIZE>>>(
@@ -570,8 +570,8 @@ appendBatchEdges(hornet::HornetDevice<TypeList<VertexMetaTypes...>, TypeList<Edg
 
     degree_t * old_degree = graph_offsets.data().get();
     const int BLOCK_SIZE = 256;
-    //int smem = xlib::DeviceProperty::smem_per_block<degree_t>(BLOCK_SIZE);
-    int num_blocks = xlib::ceil_div(total_work, BLOCK_SIZE);
+    int smem = xlib::DeviceProperty::smem_per_block<degree_t>(BLOCK_SIZE);
+    int num_blocks = xlib::ceil_div(total_work, smem);
     appendBatchEdgesKernel<BLOCK_SIZE>
         <<<num_blocks, BLOCK_SIZE>>>(
                 hornet_device,
