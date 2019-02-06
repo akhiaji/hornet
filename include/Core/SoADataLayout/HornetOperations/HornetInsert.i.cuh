@@ -66,5 +66,16 @@ reallocate_vertices(gpu::BatchUpdate<TypeList<vid_t, vid_t, EdgeMetaTypes...>, d
 
 }
 
+template <typename... VertexMetaTypes, typename... EdgeMetaTypes,
+    typename vid_t, typename degree_t>
+void
+HORNET::
+erase(gpu::BatchUpdate<TypeList<vid_t, vid_t, EdgeMetaTypes...>, degree_t>& batch, bool removeBatchDuplicates) {
+    auto hornet_device = device();
+    //Preprocess batch according to user preference
+    batch.preprocess_erase(hornet_device, removeBatchDuplicates);
+    reallocate_vertices(batch, false);
+}
+
 }
 }

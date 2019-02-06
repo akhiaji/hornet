@@ -59,7 +59,7 @@
                   << " failed with " << cudaGetErrorString(cudaStatus)  \
                   << " (" << cudaStatus << ").\n";                     \
     }												                                          \
-}                                                                                                  
+}
 
 #define CUDA_CHECK_LAST() CUDA_TRY(cudaPeekAtLastError())
 
@@ -127,6 +127,7 @@ class BatchUpdate<
 
     xlib::CubRunLengthEncode<vid_t>  cub_runlength;
     xlib::CubExclusiveSum<degree_t>  cub_prefixsum;
+    xlib::CubInclusiveMax<degree_t>  cub_prefixmax;
 
     thrust::device_vector<vid_t>   realloc_sources;
 
@@ -157,6 +158,21 @@ class BatchUpdate<
             thrust::device_vector<degree_t>& graph_offsets,
             hornet::HornetDevice<TypeList<VertexMetaTypes...>, TypeList<EdgeMetaTypes...>, vid_t, degree_t>& hornet_device) noexcept;
 
+    template <typename... VertexMetaTypes>
+    degree_t get_unique_sources_meta_data_erase(
+        vid_t * const batch_src,
+        vid_t * const batch_dst,
+        const degree_t nE,
+        thrust::device_vector<vid_t>& unique_sources,
+        thrust::device_vector<degree_t>& batch_src_offsets,
+        thrust::device_vector<degree_t>& batch_dst_offsets,
+        thrust::device_vector<degree_t>& batch_dst_degrees,
+        thrust::device_vector<degree_t>& graph_offsets,
+        hornet::HornetDevice<TypeList<VertexMetaTypes...>, TypeList<EdgeMetaTypes...>, vid_t, degree_t>& hornet_device) noexcept;
+
+    template <typename... VertexMetaTypes>
+    void overWriteEdges(hornet::HornetDevice<TypeList<VertexMetaTypes...>, TypeList<EdgeMetaTypes...>, vid_t, degree_t>& hornet_device) noexcept;
+
     public :
 
     using VertexAccessT = SoAPtr<degree_t, xlib::byte_t*, degree_t, degree_t>;
@@ -175,7 +191,7 @@ class BatchUpdate<
         bool removeBatchDuplicates,
         bool removeGraphDuplicates) noexcept;
 
-    void remove_batch_duplicates(void) noexcept;
+    void remove_batch_duplicates(bool insert = true) noexcept;
 
     CSoAData<TypeList<vid_t, vid_t, EdgeMetaTypes...>, DeviceType::DEVICE>&
     in_edge(void) noexcept;
@@ -213,6 +229,26 @@ class BatchUpdate<
             hornet::HornetDevice<TypeList<VertexMetaTypes...>, TypeList<EdgeMetaTypes...>, vid_t, degree_t>& hornet_device) noexcept;
 
     void print(void) noexcept;
+
+    template <typename... VertexMetaTypes>
+    void preprocess_erase(
+        hornet::HornetDevice<TypeList<VertexMetaTypes...>, TypeList<EdgeMetaTypes...>, vid_t, degree_t>& hornet_device,
+        bool removeBatchDuplicates) noexcept;
+
+    template <typename... VertexMetaTypes>
+    void locateEdgesToBeErased(
+        hornet::HornetDevice<TypeList<VertexMetaTypes...>, TypeList<EdgeMetaTypes...>, vid_t, degree_t>& hornet_device,
+        bool duplicate_edges_present) noexcept;
+
+    template <typename... VertexMetaTypes>
+    void markOverwriteSrcDst(
+        hornet::HornetDevice<TypeList<VertexMetaTypes...>, TypeList<EdgeMetaTypes...>, vid_t, degree_t>& hornet_device,
+        thrust::device_vector<vid_t> &unique_sources,
+        thrust::device_vector<degree_t>& batch_src_degrees,
+        thrust::device_vector<degree_t>& destination_edges,
+        thrust::device_vector<degree_t>& destination_edges_flag,
+        thrust::device_vector<degree_t>& source_edge_flag,
+        thrust::device_vector<degree_t>& source_edge_offset) noexcept;
 };
 
 }

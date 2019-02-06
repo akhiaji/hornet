@@ -94,6 +94,8 @@ public:
 
     void insert(gpu::BatchUpdate<TypeList<vid_t, vid_t, EdgeMetaTypes...>, degree_t>& batch, bool removeBatchDuplicates = false, bool removeGraphDuplicates = false);
 
+    void erase(gpu::BatchUpdate<TypeList<vid_t, vid_t, EdgeMetaTypes...>, degree_t>& batch, bool removeBatchDuplicates = false);
+
     void print(void);
 };
 
