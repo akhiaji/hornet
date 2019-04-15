@@ -47,7 +47,7 @@ const color_t FIRST_COLOR = color_t(0);
 
 struct GiantCCOperator {
     color_t*             d_colors;
-    TwoLevelQueue<vid_t> queue;
+    TwoLevelQueue<vert_t> queue;
 
     OPERATOR(Vertex& src, Edge& edge) {
         auto dst = edge.dst_id();
@@ -60,7 +60,7 @@ struct GiantCCOperator {
 
 struct BuildVertexEnqueue {
     color_t*             d_colors;
-    TwoLevelQueue<vid_t> queue;
+    TwoLevelQueue<vert_t> queue;
 
     OPERATOR(Vertex& src) {
         if (d_colors[src.id()] == NO_COLOR) {

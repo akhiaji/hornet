@@ -43,7 +43,7 @@ namespace hornets_nest {
 struct InitOperator {
     HostDeviceVar<PrData> hd_prdata;
 
-    OPERATOR(vid_t src) {
+    OPERATOR(vert_t src) {
         hd_prdata().curr_pr[src]   = 0.0f;
     	hd_prdata().abs_diff[src]  = 0.0f;
     	hd_prdata().prev_pr[src]   = 1.0f / static_cast<float>(hd_prdata().nV);
@@ -56,7 +56,7 @@ struct InitOperator {
 struct ResetCurr {
     HostDeviceVar<PrData> hd_prdata;
 
-    OPERATOR(vid_t src) {
+    OPERATOR(vert_t src) {
     	hd_prdata().curr_pr[src]     = 0.0f;
     	*(hd_prdata().reduction_out) = 0;
     }
@@ -102,7 +102,7 @@ struct AddContribuitionsPull {
 struct DampAndDiffAndCopy {
     HostDeviceVar<PrData> hd_prdata;
 
-    OPERATOR(vid_t src) {
+    OPERATOR(vert_t src) {
     	hd_prdata().curr_pr[src]  = hd_prdata().normalized_damp +
                                    hd_prdata().damp * hd_prdata().curr_pr[src];
 
@@ -117,7 +117,7 @@ struct DampAndDiffAndCopy {
 struct Sum {
     HostDeviceVar<PrData> hd_prdata;
 
-    OPERATOR(vid_t src) {
+    OPERATOR(vert_t src) {
         atomicAdd(hd_prdata().reduction_out, hd_prdata().abs_diff[src]);
     }
 };
@@ -127,7 +127,7 @@ struct Sum {
 struct SumPr {
     HostDeviceVar<PrData> hd_prdata;
 
-    OPERATOR(vid_t src) {
+    OPERATOR(vert_t src) {
         atomicAdd(hd_prdata().reduction_out, hd_prdata().prev_pr[src] );
     }
 };
@@ -135,9 +135,9 @@ struct SumPr {
 //------------------------------------------------------------------------------
 
 struct SetIds {
-    vid_t* ids;
+    vert_t* ids;
 
-    OPERATOR(vid_t src) {
+    OPERATOR(vert_t src) {
         ids[src] = src;
     }
 };

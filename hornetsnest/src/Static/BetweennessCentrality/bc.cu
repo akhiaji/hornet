@@ -88,7 +88,7 @@ void BCCentrality::release(){
     gpu::free(hd_BCData().bc);
 }
 
-void BCCentrality::setRoot(vid_t root_){
+void BCCentrality::setRoot(vert_t root_){
     hd_BCData().root=root_;
 }
 
@@ -98,7 +98,7 @@ void BCCentrality::run() {
     // Initialization
     hd_BCData().currLevel=0;
     forAllnumV(hornet, InitOneTree { hd_BCData });
-    vid_t root = hd_BCData().root;
+    vert_t root = hd_BCData().root;
 
     hd_BCData().queue.insert(root);                   // insert source in the frontier
     gpu::memsetZero(hd_BCData().d + root);

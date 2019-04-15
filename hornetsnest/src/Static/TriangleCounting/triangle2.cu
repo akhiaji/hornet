@@ -1,15 +1,15 @@
 /*
 Please cite:
-* J. Fox, O. Green, K. Gabert, X. An, D. Bader, “Fast and Adaptive List Intersections on the GPU”, 
-IEEE High Performance Extreme Computing Conference (HPEC), 
+* J. Fox, O. Green, K. Gabert, X. An, D. Bader, “Fast and Adaptive List Intersections on the GPU”,
+IEEE High Performance Extreme Computing Conference (HPEC),
 Waltham, Massachusetts, 2018
-* O. Green, J. Fox, A. Tripathy, A. Watkins, K. Gabert, E. Kim, X. An, K. Aatish, D. Bader, 
-“Logarithmic Radix Binning and Vectorized Triangle Counting”, 
-IEEE High Performance Extreme Computing Conference (HPEC), 
+* O. Green, J. Fox, A. Tripathy, A. Watkins, K. Gabert, E. Kim, X. An, K. Aatish, D. Bader,
+“Logarithmic Radix Binning and Vectorized Triangle Counting”,
+IEEE High Performance Extreme Computing Conference (HPEC),
 Waltham, Massachusetts, 2018
-* O. Green, P. Yalamanchili ,L.M. Munguia, “Fast Triangle Counting on GPU”, 
-Irregular Applications: Architectures and Algorithms (IA3), 
-New Orleans, Louisiana, 2014 
+* O. Green, P. Yalamanchili ,L.M. Munguia, “Fast Triangle Counting on GPU”,
+Irregular Applications: Architectures and Algorithms (IA3),
+New Orleans, Louisiana, 2014
 */
 
 
@@ -24,7 +24,7 @@ namespace hornets_nest {
 TriangleCounting2::TriangleCounting2(HornetGraph& hornet) :
                                        StaticAlgorithm(hornet)
 
-{                                       
+{
 }
 
 TriangleCounting2::~TriangleCounting2(){
@@ -50,10 +50,10 @@ struct OPERATOR_AdjIntersectionCount {
         triangle_t count = 0;
         int deg1 = v1.degree();
         int deg2 = v2.degree();
-        vid_t* ui_begin = v1.neighbor_ptr();
-        vid_t* vi_begin = v2.neighbor_ptr();
-        vid_t* ui_end = ui_begin+deg1-1;
-        vid_t* vi_end = vi_begin+deg2-1;
+        vert_t* ui_begin = v1.neighbor_ptr();
+        vert_t* vi_begin = v2.neighbor_ptr();
+        vert_t* ui_end = ui_begin+deg1-1;
+        vert_t* vi_end = vi_begin+deg2-1;
         int comp_equals, comp1, comp2;
         while (vi_begin <= vi_end && ui_begin <= ui_end) {
             comp_equals = (*ui_begin == *vi_begin);
@@ -75,7 +75,7 @@ struct OPERATOR_AdjIntersectionCount {
 struct OPERATOR_AdjIntersectionCountBalanced {
     triangle_t* d_triPerVertex;
 
-    OPERATOR(Vertex &u, Vertex& v, vid_t* ui_begin, vid_t* ui_end, vid_t* vi_begin, vid_t* vi_end, int FLAG) {
+    OPERATOR(Vertex &u, Vertex& v, vert_t* ui_begin, vert_t* ui_end, vert_t* vi_begin, vert_t* vi_end, int FLAG) {
         int count = 0;
         if (!FLAG) {
             int comp_equals, comp1, comp2, ui_bound, vi_bound;
@@ -96,7 +96,7 @@ struct OPERATOR_AdjIntersectionCountBalanced {
                     ui_begin += 1;
             }
         } else {
-            vid_t vi_low, vi_high, vi_mid;
+            vert_t vi_low, vi_high, vi_mid;
             while (ui_begin <= ui_end) {
                 auto search_val = *ui_begin;
                 vi_low = 0;

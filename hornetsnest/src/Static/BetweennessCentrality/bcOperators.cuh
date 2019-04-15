@@ -49,7 +49,7 @@ struct InitBC {
     HostDeviceVar<BCData> bcd;
 
 
-    OPERATOR(vid_t src) {
+    OPERATOR(vert_t src) {
         bcd().bc[0] = 0.0;
     }
 };
@@ -62,7 +62,7 @@ struct InitOneTree {
     HostDeviceVar<BCData> bcd;
 
     // Used at the very beginning
-    OPERATOR(vid_t src) {
+    OPERATOR(vert_t src) {
         bcd().d[src] = INT32_MAX;
         bcd().sigma[src] = 0;
         bcd().delta[src] = 0.0;
@@ -76,7 +76,7 @@ struct BC_BFSTopDown {
 
         degree_t nextLevel = bcd().currLevel + 1;
 
-        vid_t v = src.id(), w = edge.dst_id();        
+        vert_t v = src.id(), w = edge.dst_id();        
 
         degree_t prev = atomicCAS(bcd().d + w, INT32_MAX, nextLevel);
         if (prev == INT32_MAX) {
@@ -94,7 +94,7 @@ struct BC_DepAccumulation {
 
     OPERATOR(Vertex& src, Edge& edge){
 
-        vid_t v = src.id(), w = edge.dst_id();        
+        vert_t v = src.id(), w = edge.dst_id();        
 
         degree_t *d = bcd().d;  // depth
         degree_t *sigma = bcd().sigma;
@@ -114,7 +114,7 @@ struct IncrementBC {
     HostDeviceVar<BCData> bcd;
 
     // Used at the very beginning
-    OPERATOR(vid_t src) {
+    OPERATOR(vert_t src) {
         if(src != bcd().root)
             bcd().bc[src]+=bcd().delta[src];
     }

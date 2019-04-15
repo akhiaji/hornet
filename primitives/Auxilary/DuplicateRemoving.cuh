@@ -44,10 +44,10 @@ namespace hornets_nest {
 
 template<unsigned HASHTABLE_SIZE, int ITERS = 1>
 __device__ __forceinline__
-bool duplicate_removing_aux(vid_t vertex, void* smem) {
+bool duplicate_removing_aux(vert_t vertex, void* smem) {
    static_assert(xlib::is_power2(HASHTABLE_SIZE),
                 "HASHTABLE_SIZE must be a power of two");
-   const vid_t PRIME_ARRAY[] = { 1803059, 397379, 433781, 590041, 593689,
+   const vert_t PRIME_ARRAY[] = { 1803059, 397379, 433781, 590041, 593689,
                                  931517, 1049897, 1285607, 1636007, 1803059 };
 
    //auto hash_table = static_cast<vid2_t*>(smem);
@@ -57,7 +57,7 @@ bool duplicate_removing_aux(vid_t vertex, void* smem) {
 	for (int i = 0; i < ITERS; i++) {
        const unsigned hash = static_cast<unsigned>(vertex * PRIME_ARRAY[i]) %
                              HASHTABLE_SIZE;
-   	vid2_t to_write = xlib::make2(static_cast<vid_t>(threadIdx.x), vertex);
+   	vid2_t to_write = xlib::make2(static_cast<vert_t>(threadIdx.x), vertex);
 
    	hash_table[hash] = reinterpret_cast<volatile int64_t&>
                                (const_cast<volatile vid2_t&>(to_write));
@@ -75,7 +75,7 @@ bool duplicate_removing_aux(vid_t vertex, void* smem) {
 //
 template<int ITERS = 1>
 __device__ __forceinline__
-bool is_duplicate(vid_t vertex) {
+bool is_duplicate(vert_t vertex) {
    const unsigned      SMEM_SIZE = xlib::smem_per_block<vid2_t, 128>();
    const unsigned HASHTABLE_SIZE = xlib::rounddown_pow2(SMEM_SIZE);
 

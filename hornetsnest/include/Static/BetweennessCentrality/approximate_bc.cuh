@@ -1,7 +1,7 @@
 /**
  * @brief
  * @author Oded Green                                                       <br>
- *   NVIDIA Corporation                                                     <br>       
+ *   NVIDIA Corporation                                                     <br>
  *   ogreen@nvidia.com                                                      <br>
  * @date July, 2018
  *
@@ -47,7 +47,7 @@ namespace hornets_nest {
 
 class ApproximateBC : public BCCentrality {
 public:
-    ApproximateBC(HornetGraph& hornet, vid_t* rootIDs_, vid_t numRoots_);
+    ApproximateBC(HornetGraph& hornet, vert_t* rootIDs_, vert_t numRoots_);
 
     ~ApproximateBC();
 
@@ -56,12 +56,12 @@ public:
     void release()  override;
     bool validate() override;
 
-	static void generateRandomRootsUniform(vid_t nV,vid_t numRoots,
-	vid_t** returnRoots, int randSeed=-1);   
+	static void generateRandomRootsUniform(vert_t nV,vert_t numRoots,
+	vert_t** returnRoots, int randSeed=-1);
 private:
 
-    vid_t* h_rootIDs;
-    vid_t numRoots;
+    vert_t* h_rootIDs;
+    vert_t numRoots;
 
 };
 

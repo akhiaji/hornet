@@ -16,7 +16,7 @@ int exec(int argc, char* argv[]) {
     using namespace graph::parsing_prop;
 
 
-    graph::GraphStd<vid_t, eoff_t> graph;
+    graph::GraphStd<vert_t, eoff_t> graph;
     graph.read(argv[1], PRINT_INFO | SORT);
     // CommandLineParam cmd(graph, argc, argv);
 
@@ -36,7 +36,7 @@ int exec(int argc, char* argv[]) {
 
 
 	graph::ParsingProp flag = PRINT_INFO | SORT;
-	        graph::GraphStd<vid_t, eoff_t> graphUnDir(UNDIRECTED);
+	        graph::GraphStd<vert_t, eoff_t> graphUnDir(UNDIRECTED);
     graphUnDir.read(argv[1],flag);
 
     HornetInit hornet_init_undir(graphUnDir.nV(), graphUnDir.nE(), graphUnDir.csr_out_offsets(),

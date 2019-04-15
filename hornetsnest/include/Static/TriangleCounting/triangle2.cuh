@@ -7,10 +7,10 @@ namespace hornets_nest {
 
 //using triangle_t = int;
 using triangle_t = unsigned long long;
-using vid_t = int;
+using vert_t = int;
 
-using HornetGraph = ::hornet::gpu::Hornet<vid_t>;
-using HornetInit  = ::hornet::HornetInit<vid_t>;
+using HornetGraph = ::hornet::gpu::Hornet<vert_t>;
+using HornetInit  = ::hornet::HornetInit<vert_t>;
 
 
 //==============================================================================

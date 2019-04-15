@@ -49,7 +49,7 @@ const dist_t INF = std::numeric_limits<dist_t>::max();
 
 struct BFSOperator1 {
     dist_t*              d_distances;
-    TwoLevelQueue<vid_t> queue;
+    TwoLevelQueue<vert_t> queue;
 
     OPERATOR(Vertex& vertex, Edge& edge) {
         auto dst = edge.dst_id();
@@ -62,7 +62,7 @@ struct BFSOperator2 {
     dist_t* d_distances;
     dist_t  current_level;
 
-    OPERATOR(vid_t& vertex_id) {
+    OPERATOR(vert_t& vertex_id) {
         d_distances[vertex_id] = current_level;
     }
 };
@@ -70,7 +70,7 @@ struct BFSOperator2 {
 struct BFSOperatorAtomic {                  //deterministic
     dist_t               current_level;
     dist_t*              d_distances;
-    TwoLevelQueue<vid_t> queue;
+    TwoLevelQueue<vert_t> queue;
 
     OPERATOR(Vertex& vertex, Edge& edge) {
         auto dst = edge.dst_id();
@@ -103,7 +103,7 @@ void BfsTopDown2::reset() {
     forAllnumV(hornet, [=] __device__ (int i){ distances[i] = INF; } );
 }
 
-void BfsTopDown2::set_parameters(vid_t source) {
+void BfsTopDown2::set_parameters(vert_t source) {
     bfs_source = source;
     queue.insert(bfs_source);               // insert bfs source in the frontier
     gpu::memsetZero(d_distances + bfs_source);  //reset source distance

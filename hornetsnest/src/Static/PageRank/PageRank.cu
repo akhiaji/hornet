@@ -135,7 +135,7 @@ void StaticPageRank::run() {
 
 void StaticPageRank::printRankings() {
     pr_t*  d_scores, *h_scores;
-    vid_t* d_ids, *h_ids;
+    vert_t* d_ids, *h_ids;
     gpu::allocate(d_scores,  hornet.nV());
     gpu::allocate(d_ids,     hornet.nV());
     host::allocate(h_scores, hornet.nV());

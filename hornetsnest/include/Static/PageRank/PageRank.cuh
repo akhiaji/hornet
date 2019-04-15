@@ -42,9 +42,9 @@
 
 namespace hornets_nest {
 
-using vid_t = int;
-using HornetGraph = ::hornet::gpu::Hornet<vid_t>;
-using HornetInit  = ::hornet::HornetInit<vid_t>;
+using vert_t = int;
+using HornetGraph = ::hornet::gpu::Hornet<vert_t>;
+using HornetInit  = ::hornet::HornetInit<vert_t>;
 
 using pr_t = float;
 

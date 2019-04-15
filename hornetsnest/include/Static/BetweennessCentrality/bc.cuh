@@ -1,10 +1,10 @@
 /**
  * @brief
  * @author Oded Green                                                       <br>
- *   NVIDIA Corporation                                                     <br>       
+ *   NVIDIA Corporation                                                     <br>
  *   ogreen@nvidia.com
  *   @author Muhammad Osama Sakhi                                           <br>
- *   Georgia Institute of Technology                                        <br>       
+ *   Georgia Institute of Technology                                        <br>
  * @date July, 2018
  *
  * @copyright Copyright © 2017 Hornet. All rights reserved.
@@ -44,21 +44,21 @@
 
 namespace hornets_nest {
 
-  using vid_t = int;
-  using HornetGraph = ::hornet::gpu::Hornet<vid_t>;
-  using HornetInit  = ::hornet::HornetInit<vid_t>;
+  using vert_t = int;
+  using HornetGraph = ::hornet::gpu::Hornet<vert_t>;
+  using HornetInit  = ::hornet::HornetInit<vert_t>;
 
 using paths_t = degree_t;
 using bc_t = float;
 struct BCData {
-    vid_t *d;
-    vid_t *depth_indices;
+    vert_t *d;
+    vert_t *depth_indices;
     paths_t *sigma;
     bc_t *delta;
     bc_t *bc;
-    vid_t root;
+    vert_t root;
     degree_t currLevel;
-    TwoLevelQueue<vid_t> queue;
+    TwoLevelQueue<vert_t> queue;
 };
 
 class BCCentrality : public StaticAlgorithm<HornetGraph> {
@@ -68,7 +68,7 @@ public:
 
     ~BCCentrality();
 
-    void setRoot(vid_t root_);
+    void setRoot(vert_t root_);
 
     void reset()    override;
     void run()      override;
@@ -82,7 +82,7 @@ public:
 private:
     load_balancing::BinarySearch load_balancing;
 
-    HostDeviceVar<BCData>       hd_BCData;    
+    HostDeviceVar<BCData>       hd_BCData;
 
     // bool approx;
 

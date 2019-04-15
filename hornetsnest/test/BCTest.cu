@@ -19,8 +19,8 @@ int exec(int argc, char* argv[]) {
     using namespace timer;
     using namespace hornets_nest;
 
-    // GraphStd<vid_t, eoff_t> graph(UNDIRECTED);
-    graph::GraphStd<vid_t, eoff_t> graph(UNDIRECTED);
+    // GraphStd<vert_t, eoff_t> graph(UNDIRECTED);
+    graph::GraphStd<vert_t, eoff_t> graph(UNDIRECTED);
     CommandLineParam cmd(graph, argc, argv,false);
     Timer<DEVICE> TM;
 
@@ -34,7 +34,7 @@ int exec(int argc, char* argv[]) {
 
     BCCentrality bc(hornet_graph);
 
-	vid_t root = graph.max_out_degree_id();
+	vert_t root = graph.max_out_degree_id();
 	if (argc==3)
 	  root = atoi(argv[2]);
     // root = 226410;
@@ -60,8 +60,8 @@ int exec(int argc, char* argv[]) {
     TM.stop();cudaProfilerStop();
     TM.print("Exact BCCentrality");
 
-    vid_t numRoots=1000;
-    vid_t* roots = new vid_t[numRoots];
+    vert_t numRoots=1000;
+    vert_t* roots = new vert_t[numRoots];
     ApproximateBC::generateRandomRootsUniform(hornet_graph.nV(), numRoots, &roots, 1 );
 
     ApproximateBC abc(hornet_graph, roots,numRoots);

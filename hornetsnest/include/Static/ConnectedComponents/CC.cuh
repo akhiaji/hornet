@@ -42,11 +42,11 @@
 
 namespace hornets_nest {
 
-using vid_t = int;
-using vid2_2 = int;
+using vert_t = int;
+using vert2_2 = int;
 
-using HornetGraph = ::hornet::gpu::Hornet<vid_t>;
-using HornetInit  = ::hornet::HornetInit<vid_t>;
+using HornetGraph = ::hornet::gpu::Hornet<vert_t>;
+using HornetInit  = ::hornet::HornetInit<vert_t>;
 
 using color_t = int;
 
@@ -60,7 +60,7 @@ public:
     void release()  override;
     bool validate() override;
 private:
-    TwoLevelQueue<vid_t>  queue;
+    TwoLevelQueue<vert_t>  queue;
     TwoLevelQueue<vid2_t> queue_pair;
     color_t*              d_colors    { nullptr };
     HostDeviceVar<bool>   hd_continue { true };

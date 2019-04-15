@@ -1,7 +1,7 @@
 /**
  * @brief
  * @author Oded Green                                                       <br>
- *   NVIDIA Corporation                                                     <br>       
+ *   NVIDIA Corporation                                                     <br>
  *   ogreen@nvidia.com                                                      <br>
  * @date July, 2018
  *
@@ -58,7 +58,7 @@ public:
 
 private:
 
-    vid_t start_v, stop_v;
+    vert_t start_v, stop_v;
 
 };
 

@@ -50,12 +50,12 @@ namespace hornets_nest {
 // the streaming case.
 
 ApproximateBC::ApproximateBC(HornetGraph& hornet, 
-    vid_t* h_rootIDs_, vid_t numRoots_):
+    vert_t* h_rootIDs_, vert_t numRoots_):
                                        BCCentrality(hornet)
 {
     numRoots = numRoots_;
-    h_rootIDs = new vid_t[numRoots];
-    memcpy(h_rootIDs,h_rootIDs_, sizeof(vid_t)*numRoots);
+    h_rootIDs = new vert_t[numRoots];
+    memcpy(h_rootIDs,h_rootIDs_, sizeof(vert_t)*numRoots);
 
     reset();
 }
@@ -74,7 +74,7 @@ void ApproximateBC::release(){
 
 void ApproximateBC::run() {
 
-    for(vid_t r=0; r<numRoots; r++){
+    for(vert_t r=0; r<numRoots; r++){
         if((r%200)==0)
             cout << r << ", " << flush;
         
@@ -90,12 +90,12 @@ bool ApproximateBC::validate() {
 }
 
     
-void ApproximateBC::generateRandomRootsUniform(vid_t nV, 
-    vid_t numRoots, vid_t** returnRoots, int RandSeed){
+void ApproximateBC::generateRandomRootsUniform(vert_t nV, 
+    vert_t numRoots, vert_t** returnRoots, int RandSeed){
 
     bool* selected = new bool[nV];
 
-    vid_t* tempRoots = new vid_t[numRoots];
+    vert_t* tempRoots = new vert_t[numRoots];
     memset(selected,false,sizeof(bool)*nV);
 
     time_t t;
@@ -105,7 +105,7 @@ void ApproximateBC::generateRandomRootsUniform(vid_t nV,
 
     int v=0;
     while(v<numRoots){
-        vid_t randV = rand()%nV;
+        vert_t randV = rand()%nV;
 
         if(selected[randV]==true)
             continue;
