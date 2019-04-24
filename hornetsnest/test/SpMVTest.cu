@@ -13,7 +13,7 @@ int exec(int argc, char* argv[]) {
     using namespace timer;
     using namespace hornets_nest;
 
-    graph::GraphStd<vid_t, eoff_t> graph;
+    graph::GraphStd<vert_t, eoff_t> graph;
     CommandLineParam cmd(graph, argc, argv);
     auto h_vector = new int[graph.nV()];
     auto  h_value = new int[graph.nE()];
@@ -22,7 +22,7 @@ int exec(int argc, char* argv[]) {
 
     HornetInit hornet_init(graph.nV(), graph.nE(), graph.csr_out_offsets(),
                            graph.csr_out_edges());
-    hornet_init.insertEdgeData(h_value);
+    hornet_init.insertEdgeData<0>(h_value);
 
     HornetGraph hornet_matrix(hornet_init);
     SpMV spmv(hornet_matrix, h_vector);
@@ -85,4 +85,3 @@ int main(int argc, char* argv[]) {
 
     return ret;
 }
-

@@ -37,6 +37,7 @@
 #include "Auxilary/DuplicateRemoving.cuh"
 #include <Graph/GraphStd.hpp>
 #include <Graph/BFS.hpp>
+#include <cuda_profiler_api.h>
 
 namespace hornets_nest {
 
@@ -100,6 +101,7 @@ void BfsTopDown2::reset() {
     queue.clear();
 
     auto distances = d_distances;
+
     forAllnumV(hornet, [=] __device__ (int i){ distances[i] = INF; } );
 }
 
@@ -121,9 +123,12 @@ void BfsTopDown2::run() {
 
 void BfsTopDown2::run() {
     while (queue.size() > 0) {
+        cudaProfilerStart();
         forAllEdges(hornet, queue,
                     BFSOperatorAtomic { current_level, d_distances, queue },
                     load_balancing);
+
+        cudaProfilerStop();
         queue.swap();
         current_level++;
     }
@@ -135,9 +140,9 @@ void BfsTopDown2::release() {
 }
 
 bool BfsTopDown2::validate() {
-    // std::cout << "\nTotal enqueue vertices: "
-    //           << xlib::format(queue.enqueue_items())
-    //           << std::endl;
+    std::cout << "\nTotal enqueue vertices: "
+              << xlib::format(queue.enqueue_items())
+              << std::endl;
     //
     // using namespace graph;
     // GraphStd<vid_t, eoff_t> graph(hornet.csr_offsets(), hornet.nV(),

@@ -46,7 +46,9 @@ namespace hornets_nest {
 using weight_t = int;
 
 //using HornetGraph = gpu::Hornet<EMPTY, TypeList<weight_t>>;
-using HornetGraph = gpu::Csr<EMPTY, TypeList<weight_t>>;
+using vert_t = int;
+using HornetGraph = ::hornet::gpu::Hornet<vert_t, EMPTY, TypeList<int>>;
+using HornetInit  = ::hornet::HornetInit<vert_t, EMPTY, TypeList<int>>;
 
 class SSSP : public StaticAlgorithm<HornetGraph> {
 public:
@@ -58,14 +60,14 @@ public:
     void release()  override;
     bool validate() override;
 
-    void set_parameters(vid_t source);
+    void set_parameters(vert_t source);
 private:
-    TwoLevelQueue<vid_t>        queue;
+    TwoLevelQueue<vert_t>        queue;
     load_balancing::BinarySearch load_balancing;
     //load_balancing::VertexBased1 load_balancing;
     //load_balancing::ScanBased load_balancing;
     weight_t* d_distances { nullptr };
-    vid_t     sssp_source { 0 };
+    vert_t     sssp_source { 0 };
 };
 
 } // namespace hornets_nest

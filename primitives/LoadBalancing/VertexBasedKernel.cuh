@@ -45,7 +45,7 @@ namespace kernel {
 template<unsigned VW_SIZE, typename HornetDevice, typename Operator>
 __global__
 void vertexBasedVertexPairsKernel(HornetDevice              hornet,
-                                  const vid_t* __restrict__ d_input,
+                                  const int* __restrict__ d_input,  //should be templated with vid_t
                                   int                       num_vertices,
                                   Operator                  op) {
     int   group_id = (blockIdx.x * blockDim.x + threadIdx.x) / VW_SIZE;
@@ -70,7 +70,7 @@ void vertexBasedVertexPairsKernel(HornetDevice              hornet,
 template<unsigned VW_SIZE, typename HornetDevice, typename Operator>
 __global__
 void vertexBasedKernel(HornetDevice              hornet,
-                       const vid_t* __restrict__ d_input,
+                       const int* __restrict__ d_input, //should be templated with vid_t
                        int                       num_vertices,
                        Operator                  op) {
     int   group_id = (blockIdx.x * blockDim.x + threadIdx.x) / VW_SIZE;
@@ -118,11 +118,11 @@ void vertexBasedVertexPairsKernel(HornetDevice hornet, Operator op) {
     int group_lane = threadIdx.x % VW_SIZE;
 
     for (auto i = group_id; i < hornet.nV(); i += stride) {
-        const auto& src = hornet.vertex(i);
+        auto& src = hornet.vertex(i);
 
         for (auto j = group_lane; j < src.degree();  j += VW_SIZE) {
-            const auto& edge = src.edge(j);
-            const auto& dst = hornet.vertex(edge.dst_id());
+            auto& edge = src.edge(j);
+            auto& dst = hornet.vertex(edge.dst_id());
             op(src, dst);
         }
     }

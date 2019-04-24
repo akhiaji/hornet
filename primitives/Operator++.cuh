@@ -40,7 +40,7 @@
 
 #include "Queue/TwoLevelQueue.cuh"
 #include "HostDeviceVar.cuh"
-//#include "LoadBalancing/VertexBased.cuh"
+#include "LoadBalancing/VertexBased.cuh"
 #include <BasicTypes.hpp>
 //#include <Core/BatchUpdate/BatchUpdate.cuh>
 
@@ -136,8 +136,8 @@ void forAllEdges(HornetClass&         hornet,
 
 template<typename HornetClass, typename Operator, typename LoadBalancing>
 void forAllEdgeVertexPairs(HornetClass&         hornet,
-                           const Operator&      op,
-                           const LoadBalancing& load_balancing);
+                           Operator&      op,
+                           LoadBalancing& load_balancing);
 
 //==============================================================================
 //==============================================================================

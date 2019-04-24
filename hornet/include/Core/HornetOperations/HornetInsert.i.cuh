@@ -5,7 +5,7 @@ template <typename... VertexMetaTypes, typename... EdgeMetaTypes,
     typename vid_t, typename degree_t>
 HORNET::HornetDeviceT
 HORNET::
-device(void) noexcept {
+device_side(void) noexcept {
     return HornetDeviceT(_nV, _nE, _vertex_data.get_soa_ptr());
 }
 
@@ -14,7 +14,7 @@ template <typename... VertexMetaTypes, typename... EdgeMetaTypes,
 void
 HORNET::
 insert(BatchUpdate<vid_t, TypeList<EdgeMetaTypes...>, degree_t>& batch, bool removeBatchDuplicates, bool removeGraphDuplicates) {
-    auto hornet_device = device();
+    auto hornet_device = device_side();
     //Preprocess batch according to user preference
     batch.preprocess(
             hornet_device, removeBatchDuplicates, removeGraphDuplicates);
@@ -43,7 +43,7 @@ reallocate_vertices(gpu::BatchUpdate<vid_t, TypeList<EdgeMetaTypes...>, degree_t
     //realloc_vertex_meta_data contains old adjacency list information. This is used by appendBatchEdges.
     //new_vertex_meta_data contains buffer to store new adjacency list information from block array manager calls below
 
-    auto hornet_device = device();
+    auto hornet_device = device_side();
     batch.get_reallocate_vertices_meta_data(
             hornet_device, h_realloc_v_data, h_new_v_data, d_realloc_v_data, d_new_v_data, reallocated_vertices_count, is_insert);
 
@@ -73,7 +73,7 @@ template <typename... VertexMetaTypes, typename... EdgeMetaTypes,
 void
 HORNET::
 erase(gpu::BatchUpdate<vid_t, TypeList<EdgeMetaTypes...>, degree_t>& batch, bool removeBatchDuplicates) {
-    auto hornet_device = device();
+    auto hornet_device = device_side();
     //Preprocess batch according to user preference
     batch.preprocess_erase(hornet_device, removeBatchDuplicates);
     _nE = _nE - batch.nE();

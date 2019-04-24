@@ -35,6 +35,7 @@
  */
 #include "Static/ConnectedComponents/CC.cuh"
 #include <Graph/WCC.hpp>
+#include <cuda_profiler_api.h>
 
 namespace hornets_nest {
 
@@ -136,8 +137,10 @@ void CC::run() {
     queue.insert(max_vertex);
 
     while (queue.size() > 0) {
+        cudaProfilerStart();
         forAllEdges(hornet, queue, GiantCCOperator { d_colors, queue },
                     load_balancing);
+        cudaProfilerStop();
         queue.swap();
     }
     queue.clear();

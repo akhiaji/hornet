@@ -34,9 +34,9 @@
  * </blockquote>}
 
 Please cite:
-A. van der Grinten, E. Bergamini, O. Green, H. Meyerhenke, D. Bader, 
-“Scalable Katz Ranking Computation in Large Dynamic Graphs”, 
-European Symposium on Algorithms, Helsinki, Finland, 2018 
+A. van der Grinten, E. Bergamini, O. Green, H. Meyerhenke, D. Bader,
+“Scalable Katz Ranking Computation in Large Dynamic Graphs”,
+European Symposium on Algorithms, Helsinki, Finland, 2018
 */
 
 #include "Static/KatzCentrality/Katz.cuh"
@@ -178,7 +178,7 @@ void KatzCentrality::run() {
         // As such, we use the num_prev_active variables to store the number of
         // previous active vertices and are able to find the K-th from last
         // vertex (which is essentially going from the tail of the array).
-        xlib::CubSortByKey<double, vid_t>::srun
+        xlib::CubSortByKey<double, vert_t>::srun
             (hd_katzdata().lower_bound_unsorted,
              hd_katzdata().vertex_array_unsorted,
              old_active_count, hd_katzdata().lower_bound_sorted,
@@ -223,7 +223,7 @@ void KatzCentrality::printKMostImportant() {
     if (hd_katzdata().num_prev_active > hd_katzdata().K) {
         for (int i = hd_katzdata().num_prev_active - 1;
                 i >= hd_katzdata().num_prev_active - hd_katzdata().K; i--) {
-            vid_t j = vertex_array[i];
+            vert_t j = vertex_array[i];
             std::cout << j << "\t\t" << KC[j] << "\t\t" << upper_bound[j]
                       << upper_bound[j] - lower_bound[j] << "\n";
         }

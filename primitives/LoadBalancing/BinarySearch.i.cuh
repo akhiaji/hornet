@@ -71,15 +71,15 @@ void BinarySearch::apply(HornetClass& hornet,
     if (d_input != nullptr) {
     kernel::computeWorkKernel
         <<< xlib::ceil_div<BLOCK_SIZE>(num_vertices), BLOCK_SIZE >>>
-        (hornet.device(), d_input, num_vertices, d_work.data().get());
+        (hornet.device_side(), d_input, num_vertices, d_work.data().get());
     } else {
     kernel::computeWorkKernel
         <<< xlib::ceil_div<BLOCK_SIZE>(num_vertices), BLOCK_SIZE >>>
-        (hornet.device(), num_vertices, d_work.data().get());
+        (hornet.device_side(), num_vertices, d_work.data().get());
     }
     CHECK_CUDA_ERROR
 
-    prefixsum.run(d_work.data().get(), num_vertices);
+    prefixsum.run(d_work.data().get(), num_vertices + 1);
     CHECK_CUDA_ERROR
 
     int total_work;
@@ -90,7 +90,7 @@ void BinarySearch::apply(HornetClass& hornet,
         return;
     kernel::binarySearchKernel<BLOCK_SIZE>
         <<< grid_size, BLOCK_SIZE, DYN_SMEM_SIZE >>>
-        (hornet.device(), d_input, d_work.data().get(), num_vertices, op);
+        (hornet.device_side(), d_input, d_work.data().get(), num_vertices, op);
     CHECK_CUDA_ERROR
 }
 

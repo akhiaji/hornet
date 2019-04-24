@@ -42,7 +42,7 @@ struct Init {
     HostDeviceVar<KatzData> kd;
 
     // Used at the very beginning
-    OPERATOR(vid_t src) {
+    OPERATOR(vert_t src) {
         kd().num_paths_prev[src] = 1;
         kd().num_paths_curr[src] = 0;
         kd().KC[src]             = 0.0;
@@ -55,7 +55,7 @@ struct Init {
 struct InitNumPathsPerIteration {
     HostDeviceVar<KatzData> kd;
 
-    OPERATOR(vid_t src) {
+    OPERATOR(vert_t src) {
         kd().num_paths_curr[src] = 0;
     }
 };
@@ -78,7 +78,7 @@ struct UpdatePathCount {
 struct UpdateKatzAndBounds {
     HostDeviceVar<KatzData> kd;
 
-    OPERATOR(vid_t src) {
+    OPERATOR(vert_t src) {
         kd().KC[src] = kd().KC[src] + kd().alphaI *
                         static_cast<double>(kd().num_paths_curr[src]);
         kd().lower_bound[src] = kd().KC[src] + kd().lower_bound_const *
@@ -99,7 +99,7 @@ struct UpdateKatzAndBounds {
 struct CountActive {
     HostDeviceVar<KatzData> kd;
 
-    OPERATOR(vid_t src) {
+    OPERATOR(vert_t src) {
         auto index = kd().vertex_array_sorted[kd().num_prev_active - kd().K];
         if (kd().upper_bound[src] > kd().lower_bound[index])
             atomicAdd(&(kd.ptr()->num_active), 1);

@@ -57,7 +57,7 @@ public:
 
     template<typename HornetClass, typename Operator>
     void apply(const HornetClass& hornet,
-               const vid_t*       d_input,
+               const int*       d_input, //should be changed to parameterize with respect to vid_t
                int                num_vertices,
                Operator&&         op) const noexcept;
 
@@ -65,7 +65,7 @@ public:
     void apply(const HornetClass& hornet, Operator&& op) const noexcept;
 
     template<typename HornetClass, typename Operator>
-    void applyVertexPairs(const HornetClass& hornet, Operator&& op) const noexcept;
+    void applyVertexPairs(HornetClass& hornet, Operator&& op) noexcept;
 
 private:
     static const unsigned BLOCK_SIZE = 128;

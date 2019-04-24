@@ -424,12 +424,11 @@ void forAllAdjUnions(HornetClass&          hornet,
     hornets_nest::gpu::allocate(hd_queue_info().d_queue_pos, MAX_ADJ_UNIONS_BINS+1);
     hornets_nest::gpu::memsetZero(hd_queue_info().d_queue_pos, MAX_ADJ_UNIONS_BINS+1);
     unsigned long long *queue_pos = (unsigned long long *)calloc(MAX_ADJ_UNIONS_BINS+1, sizeof(unsigned long long));
-
     // figure out cutoffs/counts per bin
     if (vertex_pairs.size())
-        forAllVertexPairs(hornet, vertex_pairs, bin_edges {hd_queue_info, true, WORK_FACTOR});
+        forAllVertexPairs(hornet, vertex_pairs, bin_edges<int> {hd_queue_info, true, WORK_FACTOR});
     else
-        forAllEdgeVertexPairs(hornet, bin_edges {hd_queue_info, true, WORK_FACTOR}, load_balancing);
+        forAllEdgeVertexPairs(hornet, bin_edges<int> {hd_queue_info, true, WORK_FACTOR}, load_balancing);
 
     // copy queue size info to from device to host
     hornets_nest::gpu::copyToHost(hd_queue_info().d_queue_sizes, MAX_ADJ_UNIONS_BINS, queue_sizes);
@@ -443,9 +442,9 @@ void forAllAdjUnions(HornetClass&          hornet,
     */
     // bin edges
     if (vertex_pairs.size())
-        forAllVertexPairs(hornet, vertex_pairs, bin_edges {hd_queue_info, false, WORK_FACTOR});
+        forAllVertexPairs(hornet, vertex_pairs, bin_edges<int> {hd_queue_info, false, WORK_FACTOR});
     else
-        forAllEdgeVertexPairs(hornet, bin_edges {hd_queue_info, false, WORK_FACTOR}, load_balancing);
+        forAllEdgeVertexPairs(hornet, bin_edges<int> {hd_queue_info, false, WORK_FACTOR}, load_balancing);
 
     TM.stop();
     TM.print("queueing and binning:");
@@ -646,7 +645,7 @@ template<typename HornetClass, typename Operator>
 void forAllVertices(HornetClass& hornet, const Operator& op) {
     detail::forAllVerticesKernel
         <<< xlib::ceil_div<BLOCK_SIZE_OP2>(hornet.nV()), BLOCK_SIZE_OP2 >>>
-        (hornet.device(), op);
+        (hornet.device_side(), op);
     CHECK_CUDA_ERROR
 }
 
@@ -662,8 +661,8 @@ void forAllEdges(HornetClass&         hornet,
 
 template<typename HornetClass, typename Operator, typename LoadBalancing>
 void forAllEdgeVertexPairs(HornetClass&         hornet,
-                           const Operator&      op,
-                           const LoadBalancing& load_balancing) {
+                           Operator&      op,
+                           LoadBalancing& load_balancing) {
     load_balancing.applyVertexPairs(hornet, op);
 }
 

@@ -42,9 +42,9 @@
 #include "HornetAlg.hpp"
 
 namespace hornets_nest {
-
-using HornetGraph = gpu::Csr<EMPTY, TypeList<int>>;
-//using HornetGraph = gpu::Hornet<EMPTY, TypeList<int>>;
+using vert_t = int;
+using HornetGraph = ::hornet::gpu::Hornet<vert_t, EMPTY, TypeList<int>>;
+using HornetInit  = ::hornet::HornetInit<vert_t, EMPTY, TypeList<int>>;
 
 class SpMV : public StaticAlgorithm<HornetGraph> {
 public:

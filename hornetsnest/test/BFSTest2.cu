@@ -31,13 +31,13 @@ int exec(int argc, char* argv[]) {
     bfs_top_down.set_parameters(root);
  
     Timer<DEVICE> TM;
-    cudaProfilerStart();
+    //cudaProfilerStart();
     TM.start();
 
     bfs_top_down.run();
 
     TM.stop();
-    cudaProfilerStop();
+    //cudaProfilerStop();
     TM.print("TopDown2");
 
     auto is_correct = bfs_top_down.validate();

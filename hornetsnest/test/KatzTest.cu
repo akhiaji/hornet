@@ -53,8 +53,8 @@ int exec(int argc, char* argv[]) {
 
 
 	cudaSetDevice(0);
-    GraphStd<vid_t, eoff_t> graph(UNDIRECTED);
-    
+    GraphStd<vert_t, eoff_t> graph(UNDIRECTED);
+
     graph.read(argv[1], SORT | PRINT_INFO);
 
     HornetInit hornet_init(graph.nV(), graph.nE(),
@@ -66,7 +66,7 @@ int exec(int argc, char* argv[]) {
 	int           topK = graph.nV();
      if(argc>2)
         topK=atoi(argv[2]);
- 
+
     // Finding largest vertex degree
     degree_t max_degree_vertex = hornet_graph.max_degree();
     std::cout << "Max degree vextex is " << max_degree_vertex << std::endl;
@@ -85,7 +85,7 @@ int exec(int argc, char* argv[]) {
     auto total_time = TM.duration();
     std::cout << "The number of iterations     : "
               << kcPostUpdate.get_iteration_count()
-              << "\nTopK                       : " << topK 
+              << "\nTopK                       : " << topK
               << "\nTotal time for KC          : " << total_time
               << "\nAverage time per iteartion : "
               << total_time /
@@ -111,4 +111,3 @@ int main(int argc, char* argv[]) {
 
     return ret;
 }
-

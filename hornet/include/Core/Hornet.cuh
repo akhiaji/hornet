@@ -107,9 +107,11 @@ public:
 
     degree_t nE(void) const noexcept;
 
-    HornetDeviceT device(void) noexcept;
+    HornetDeviceT device_side(void) noexcept;
 
     vid_t max_degree_id();
+
+    degree_t max_degree();
 };
 
 #define HORNET Hornet<vid_t,\
